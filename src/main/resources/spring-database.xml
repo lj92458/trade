@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	   xsi:schemaLocation="http://www.springframework.org/schema/beans
+      http://www.springframework.org/schema/beans/spring-beans-4.0.xsd">
+
+	<!-- ************************************************************************************************* -->
+	<!-- *                                        MyBatis 配置                                                                                      			 * -->
+	<!-- ************************************************************************************************* -->
+
+	<!-- 配置sqlSessionFactory -->
+	<bean id="sqlSessionFactory" class="org.mybatis.spring.SqlSessionFactoryBean">
+		<!-- 如果要改数据源，那么transactionManager里面也要改 -->
+		<property name="dataSource" ref="dataSource" />
+		<!-- 指定Mapper文件位置 -->
+		<property name="mapperLocations" value="classpath*:mybatis/sqlMap/**/*Mapper.xml" />
+		<!-- 制定mybatis配置位置 -->
+		<property name="configLocation" value="classpath:mybatis/mybatis-config.xml"/>
+
+	</bean>
+
+	<!-- 扫描basePackage下所有以@MyBatisRepository标识的 接口或继承MyBatisRepository的接口-->
+	<bean id="configurer_1" class="org.mybatis.spring.mapper.MapperScannerConfigurer">
+		<property name="basePackage" value="com.liujun.trade.dao" />
+		<!-- 扫描annotation -->
+		<property name="annotationClass" value="com.liujun.trade.common.mybatis._annotation.MyBatisRepository"/>
+		<!-- 扫描接口 -->
+		<property name="markerInterface" value="com.liujun.trade.common.mybatis._interface.MyBatisRepository"/>
+		<!-- 或：如下配置 -->
+		<property name="sqlSessionFactoryBeanName" value="sqlSessionFactory"/>
+	</bean>
+
+	<!-- ************************************************************************************************* -->
+	<!-- *                                        数据源配置                                                                                            			 * -->
+	<!-- ************************************************************************************************* -->
+	<!-- 代理datasource，使其能够显式获取preparedStatement的参数值
+	 已放弃，影响事务提交。会报错Cannot change read-only flag after establishing a connection
+	这个只能在开发阶段用。不要放到生产环境去了。切记！！！
+	<bean id="proxyDataSource" class="org.jdbcdslog.ConnectionPoolDataSourceProxy">
+		<property name="targetDSDirect" ref="dataSource"/>
+	</bean>
+
+	-->
+</beans>

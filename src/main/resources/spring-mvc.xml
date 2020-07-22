@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xmlns:mvc="http://www.springframework.org/schema/mvc"
+       xmlns:websocket="http://www.springframework.org/schema/websocket"
+       xsi:schemaLocation="
+      http://www.springframework.org/schema/beans
+      http://www.springframework.org/schema/beans/spring-beans-4.0.xsd
+      http://www.springframework.org/schema/context
+      http://www.springframework.org/schema/context/spring-context-4.0.xsd
+      http://www.springframework.org/schema/mvc
+      http://www.springframework.org/schema/mvc/spring-mvc-4.0.xsd
+      http://www.springframework.org/schema/websocket
+      https://www.springframework.org/schema/websocket/spring-websocket.xsd
+      ">
+
+
+    <import resource="classpath*:/spring-env.xml"/>
+
+    <!-- 防止@ResponseBody中文乱码 -->
+    <bean class="org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerAdapter ">
+        <property name="messageConverters">
+            <list>
+                <bean class="org.springframework.http.converter.StringHttpMessageConverter">
+                    <property name="supportedMediaTypes">
+                        <list>
+                            <bean class="org.springframework.http.MediaType">
+                                <constructor-arg index="0" value="text"/>
+                                <constructor-arg index="1" value="plain"/>
+                                <constructor-arg index="2" value="UTF-8"/>
+                            </bean>
+                        </list>
+                    </property>
+                </bean>
+                <bean class="org.springframework.http.converter.ResourceHttpMessageConverter"/>
+                <bean class="org.springframework.http.converter.json.MappingJackson2HttpMessageConverter"/>
+            </list>
+        </property>
+    </bean>
+
+
+    <mvc:annotation-driven/>
+
+
+    <context:component-scan
+            base-package="com.liujun.trade.controller, com.liujun.trade.common,com.liujun.trade.utils,com.liujun.trade.core"
+            use-default-filters="false">
+        <context:include-filter type="annotation" expression="org.springframework.stereotype.Component"/>
+        <context:include-filter type="annotation" expression="org.springframework.stereotype.Controller"/>
+    </context:component-scan>
+
+    <!-- 启动Spring MVC的注解功能，完成请求和注解POJO的映射 -->
+    <bean class="org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerAdapter"/>
+
+    <!-- 静态资源映射 -->
+    <mvc:resources location="/skins/" mapping="/skins/**"/>
+    <mvc:resources location="/images/" mapping="/images/**"/>
+    <mvc:resources location="/css/" mapping="/css/**"/>
+    <mvc:resources location="/js/" mapping="/js/**"/>
+    <mvc:resources location="/files/" mapping="/*"/>
+
+    <bean id="multipartResolver" class="org.springframework.web.multipart.commons.CommonsMultipartResolver">
+        <property name="defaultEncoding" value="utf-8"></property>
+        <property name="maxUploadSize" value="20971520"></property>
+        <property name="maxInMemorySize" value="40960"></property>
+    </bean>
+
+    <!-- 视图解析器 -->
+    <bean id="viewResolver" class="org.springframework.web.servlet.view.InternalResourceViewResolver">
+        <property name="viewClass" value="org.springframework.web.servlet.view.JstlView"/>
+        <property name="prefix" value="/WEB-INF/views/"/>
+        <property name="suffix" value=".jsp"/>
+    </bean>
+
+    <!-- i18n -->
+    <bean id="messageSource" class="org.springframework.context.support.ReloadableResourceBundleMessageSource">
+        <property name="cacheSeconds" value="-1"/>
+        <property name="basenames" value="classpath:languages/messages"/>
+    </bean>
+
+    <!-- 国际化操作拦截器 如果采用基于（请求/Session/Cookie）则必需配置 -->
+    <mvc:interceptors>
+        <bean class="org.springframework.web.servlet.i18n.LocaleChangeInterceptor">
+            <property name="paramName" value="language"/>
+        </bean>
+    </mvc:interceptors>
+
+    <bean id="localeResolver" class="com.liujun.trade.common.MessageLocaleResolver"/>
+
+    <!-- 业务异常处理 -->
+    <bean id="exceptionResolver" class="com.liujun.trade.common.exception.ExceptionResolver"></bean>
+
+    <!-- 这是基于websocket的聊天室。技术参考：https://docs.spring.io/spring/docs/current/spring-framework-reference/html/websocket.html  -->
+    <!--
+    客户端订阅：subscription = client.subscribe("/topic/greeting"); 取消订阅：subscription.unsubscribe()
+            如果客户端订阅的是(/app/xxx)，服务器端可以用@SubscribeMapping("/xxx") 映射一个方法，
+            并返回一个值，这个值会发给客户端。但这不是真正的订阅，而是传统的请求/应答模式
+    客户端发消息：client.send("/app/greeting")，那么会被转发到MessageMapping("/greeting" )标注的方法上。方法的返回值，
+           默认会发送到【/topic + @MessageMapping指定路径】组合而成的路径，即/topic/greeting。
+           当然也可以使用@SendTo注解显示指定发送的订阅目的地.当然也可以用程序代码决定广播到哪个订阅地址 ：template.convertAndSend(dest, chatMsg);
+    客户端发广播：client.send("/topic/greeting")
+
+     -->
+
+    <websocket:message-broker application-destination-prefix="/app">
+        <websocket:transport message-size="2048" send-timeout="10000"   />
+        <!-- 如果想用stomp,就用下面的路径构建stomp客户端，然后用客户端订阅某路径。 -->
+        <websocket:stomp-endpoint path="/webchat">
+            <websocket:sockjs/>
+        </websocket:stomp-endpoint>
+        <!-- 如果不想用stomp,就直接订阅下面的路径。-->
+        <!--下面是订阅地址:将消息发到下面的路径，就会被直接广播出去，订阅过该地址的客户端会收到消息 -->
+        <websocket:simple-broker prefix="/topic, /queue"/>
+
+    </websocket:message-broker>
+
+
+    <!-- swagger config -->
+    <import resource="spring-swagger.xml"/>
+</beans>

@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:context="http://www.springframework.org/schema/context" xmlns:tx="http://www.springframework.org/schema/tx"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans
+      http://www.springframework.org/schema/beans/spring-beans-4.0.xsd
+      http://www.springframework.org/schema/context
+      http://www.springframework.org/schema/context/spring-context-4.0.xsd
+      http://www.springframework.org/schema/tx
+      http://www.springframework.org/schema/tx/spring-tx.xsd">
+
+    <alias name="proxyDataSource" alias="dataSource_alias"/>
+
+    <!-- 数据库 -->
+    <import resource="classpath*:/spring-env.xml"/>
+    <import resource="classpath*:/spring-database.xml"/>
+
+    <!-- properties 配置文件 配置 -->
+    <bean id="propertyConfigurer" class="com.liujun.trade.common.CustomizedPropertyPlaceholderConfigurer">
+        <property name="properties" ref="configProperties"/>
+    </bean>
+
+    <!-- 事务相关 -->
+    <tx:annotation-driven transaction-manager="transactionManager"/>
+    <!-- 事务管理器 -->
+
+    <bean id="transactionManager" class="org.springframework.jdbc.datasource.DataSourceTransactionManager">
+        <!-- 如果要改数据源，那么 sqlSessionFactory 里面也要改 -->
+        <property name="dataSource" ref="dataSource"/>
+    </bean>
+
+    <context:component-scan base-package="com.liujun.trade.service" use-default-filters="false">
+        <context:include-filter type="annotation" expression="org.springframework.stereotype.Service"/>
+    </context:component-scan>
+
+</beans>
