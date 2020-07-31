@@ -326,16 +326,16 @@ public class Engine {
                     marketDepthThreadList.add(marketDepthThread);
                     marketDepthThread.start();
 
-                    //查询资金情况 -----------
-                    if ((i * time_queryOrder) % 3 == 0) {//每隔3秒，查一次账户
+                    //查询资金情况 -----------间隔小于3时，每隔3秒，查一次账户.否则每次都查
+                    if (time_queryOrder > 3 || (i * time_queryOrder) % 3 == 0) {
                         AccountThread accountThread = SpringContextUtil.getBean(AccountThread.class, trade, this);
                         accountThread.setDaemon(true);//设为守护线程
                         accountThread.start();
                     }
                 }
-                // 等待各个线程结束,最多等5秒-------
+                // 等待各个线程结束,最多等10秒-------
                 for (MarketDepthThread thread : marketDepthThreadList) {
-                    thread.join(5 * 1000);
+                    thread.join(10 * 1000);
                 }
                 // 检查线程超时,
                 for (MarketDepthThread thread : marketDepthThreadList) {
@@ -369,8 +369,8 @@ public class Engine {
                 }
 
                 if (orderPair > 0 && maxMoney >= prop.minMoney) {// 只有模拟生成的订单存在时，才搬运
-                    log_needTrade.info("(机会)市场最大差价" + prop.fmt_money.format(diffPrice_max) + "," + diffPriceDirection_maxPrice
-                            + ",预计最多能赚" + prop.fmt_money.format(maxMoney) + "元,模拟订单有" + orderPair + "对");
+                    log_needTrade.info("(机会)市场最大差价" + prop.fmt_money.format(diffPrice_max) + prop.money+"," + diffPriceDirection_maxPrice
+                            + ",预计最多能赚" + prop.fmt_money.format(maxMoney) + prop.money + ",模拟订单有" + orderPair + "对");
 
 
                     // 将各平台备份的市场挂单导入汇总挂单(因为调节限价时，会把挂单的goods量改为0)
@@ -382,95 +382,108 @@ public class Engine {
                     }
                     totalSort();// 对汇总的市场挂单进行排序：买方从大到小排序,卖方从小到大排序
                     log.debug(totalDepth.getBidList() + "");/////////////////
-                    double diffPrice = totalDepth.getBidList().get(0).getPrice()
-                            - totalDepth.getAskList().get(0).getPrice();
-                    log.debug("市场买单：" + totalDepth.getBidList().toString());
-                    log.debug("市场卖单：" + totalDepth.getAskList().toString());
-
-                    //begin: 根据备份的市场深度求当前市场价格，然后设置给虚拟平台
-                    double avgPrice = (totalDepth.getBidList().get(0).getPrice() + totalDepth.getAskList().get(0)
-                            .getPrice()) / 2.0;
-                    List<MarketOrder> virtualAskList = virtualTrade.getBackupDepth().getAskList();
-                    if (virtualAskList.size() > 0) {//降低市场卖单价格，确保真实平台能卖出
-                        virtualAskList.get(0).setPrice(avgPrice - prop.huaDian);
-                    }
-                    List<MarketOrder> virtualBidList = virtualTrade.getBackupDepth().getBidList();
-                    if (virtualBidList.size() > 0) {//提高市场买单价格，确保真实平台能买到
-                        virtualBidList.get(0).setPrice(avgPrice + prop.huaDian);
-                    }
-                    // end : 根据备份的市场深度求当前市场价格，然后设置给虚拟平台
-
-                    int keyIndex = totalDepth.getBidList().get(0).getPlatId() * 10
-                            + totalDepth.getAskList().get(0).getPlatId();
-                    log.info("可搬运最大差价【" + diffPrice + "】" + keyArray[keyIndex] + " " + totalDepth.getBidList().get(0)
-                            + "," + totalDepth.getAskList().get(0)); //
+                    //如果平台备份的有。
+                    if (totalDepth.getBidList().size() > 0 && totalDepth.getAskList().size() > 0) {
 
 
-                    double maxMoney2 = 0;
-                    if (tradeModel.equals("simple")) {
-                        maxMoney2 = createOrders1();// 正式生成订单
-                    } else if (tradeModel.equals("exact")) {
-                        maxMoney2 = createOrders2();
-                    }
+                        double diffPrice = totalDepth.getBidList().get(0).getPrice()
+                                - totalDepth.getAskList().get(0).getPrice();
+                        log.debug("市场买单：" + totalDepth.getBidList().toString());
+                        log.debug("市场卖单：" + totalDepth.getAskList().toString());
 
-
-                    if (orderPair > 0 && maxMoney2 >= prop.minMoney) {// (正式生成的订单数量)
-                        log_needTrade.info("实际能赚" + maxMoney2 + "元，实际订单有" + orderPair + "对");
-                        for (Trade trade : platList) {
-                            trade.processOrders();//订单预处理 。不需要，因为跟trade.backupUsefulOrder()方法功能是重复的
+                        //begin: 根据备份的市场深度求当前市场价格，然后设置给虚拟平台
+                        double avgPrice = (totalDepth.getBidList().get(0).getPrice() + totalDepth.getAskList().get(0)
+                                .getPrice()) / 2.0;
+                        List<MarketOrder> virtualAskList = virtualTrade.getBackupDepth().getAskList();
+                        if (virtualAskList.size() > 0) {//降低市场卖单价格，确保真实平台能卖出
+                            virtualAskList.get(0).setPrice(avgPrice * (1 - prop.huaDian));
                         }
-                        //删掉无效订单
-                        int usefulOrderCount = 0;
-                        for (Trade trade : platList) {
-                            List<UserOrder> userOrderList = trade.getUserOrderList();
-                            for (int index = userOrderList.size() - 1; index >= 0; index--) {
-                                if (userOrderList.get(index).isEnable()) {
-                                    usefulOrderCount++;
-                                } else {
-                                    userOrderList.remove(index);// 无效订单要及时删掉
-                                }
-                            }// end for
-                            //如果已经加锁，判断是否应该释放锁
-                            if (trade.getModeLock() == 1 && userOrderList.size() == 0) {
-                                trade.setModeLock(0);
-                            }
-
+                        List<MarketOrder> virtualBidList = virtualTrade.getBackupDepth().getBidList();
+                        if (virtualBidList.size() > 0) {//提高市场买单价格，确保真实平台能买到
+                            virtualBidList.get(0).setPrice(avgPrice * (1 + prop.huaDian));
                         }
-                        //如果有需要执行的订单，才应该启动线程
-                        if (usefulOrderCount > 0) {
-                            // 【多线程】对各平台执行挂单、查订单状态、撤销没完全成交的订单、刷新账户信息==================
-                            List<TradeThread> tradeThreadList = new ArrayList<>();
-                            // 为每个平台启动一个线程--------
+                        // end : 根据备份的市场深度求当前市场价格，然后设置给虚拟平台
+
+                        int keyIndex = totalDepth.getBidList().get(0).getPlatId() * 10
+                                + totalDepth.getAskList().get(0).getPlatId();
+                        log.info("可搬运最大差价【" + diffPrice + "】" + keyArray[keyIndex] + " " + totalDepth.getBidList().get(0)
+                                + "," + totalDepth.getAskList().get(0)); //
+
+
+                        double maxMoney2 = 0;
+                        if (tradeModel.equals("simple")) {
+                            maxMoney2 = createOrders1();// 正式生成订单
+                        } else if (tradeModel.equals("exact")) {
+                            maxMoney2 = createOrders2();
+                        }
+
+
+                        if (orderPair > 0 && maxMoney2 >= prop.minMoney) {// (正式生成的订单数量)
+                            log_needTrade.info("实际能赚" + maxMoney2 + prop.money + "，实际订单有" + orderPair + "对");
                             for (Trade trade : platList) {
-                                if (trade == virtualTrade)
-                                    continue;
-                                TradeThread tradeThread = SpringContextUtil.getBean(TradeThread.class, trade, this);
-                                tradeThread.setDaemon(true);// 设为守护线程
-                                tradeThreadList.add(tradeThread);
-                                tradeThread.start();
-                            }// end for
-                            // 等待各个线程结束,最多等30秒-------
-                            for (TradeThread thread : tradeThreadList) {
-                                thread.join(30 * 1000);
+                                trade.processOrders();//订单预处理 。不需要，因为跟trade.backupUsefulOrder()方法功能是重复的
                             }
-                            // 检查线程超时
-                            for (TradeThread thread : tradeThreadList) {
-                                if (!thread.isSuccess()) {
-                                    throw new Exception(thread.getName() + ":TradeThread异常");
+                            //删掉无效订单
+                            int usefulOrderCount = 0;
+                            for (Trade trade : platList) {
+                                List<UserOrder> userOrderList = trade.getUserOrderList();
+                                for (int index = userOrderList.size() - 1; index >= 0; index--) {
+                                    if (userOrderList.get(index).isEnable()) {
+                                        usefulOrderCount++;
+                                    } else {
+                                        userOrderList.remove(index);// 无效订单要及时删掉
+                                    }
+                                }// end for
+                                //如果已经加锁，判断是否应该释放锁
+                                if (trade.getModeLock() == 1 && userOrderList.size() == 0) {
+                                    trade.setModeLock(0);
                                 }
+
                             }
-                            log_haveTrade
-                                    .info("===================================================================================");
-                            initVirtualPlat();
-                            log.info("各线程都已结束=========");
-                            // end 【多线程】对各平台执行挂单、查订单状态、撤销没完全成交的订单、刷新账户信息============
-                        }//end 如果有需要执行的订单，才应该启动线程
-                    } else {//end 如果正式生成的订单数量>0
-                        log.info("正式订单最多赚" + maxMoney2 + "," + orderPair + "对订单(不值得/看不上)----------------------");
+                            //如果有需要执行的订单，才应该启动线程
+                            if (usefulOrderCount > 0) {
+                                // 【多线程】对各平台执行挂单、查订单状态、撤销没完全成交的订单、刷新账户信息==================
+                                List<TradeThread> tradeThreadList = new ArrayList<>();
+                                // 为每个平台启动一个线程--------
+                                for (Trade trade : platList) {
+                                    if (trade == virtualTrade)
+                                        continue;
+                                    TradeThread tradeThread = SpringContextUtil.getBean(TradeThread.class, trade, this);
+                                    tradeThread.setDaemon(true);// 设为守护线程
+                                    tradeThreadList.add(tradeThread);
+                                    tradeThread.start();
+                                }// end for
+                                // 等待各个线程结束,最多等30秒-------
+                                for (TradeThread thread : tradeThreadList) {
+                                    thread.join(30 * 1000);
+                                }
+                                // 检查线程超时
+                                for (TradeThread thread : tradeThreadList) {
+                                    if (!thread.isSuccess()) {
+                                        throw new Exception(thread.getName() + ":TradeThread异常");
+                                    }
+                                }
+                                log_haveTrade
+                                        .info("===================================================================================");
+                                initVirtualPlat();
+                                log.info("各线程都已结束=========");
+                                // end 【多线程】对各平台执行挂单、查订单状态、撤销没完全成交的订单、刷新账户信息============
+                            }//end 如果有需要执行的订单，才应该启动线程
+                        } else {//end 如果正式生成的订单数量>0
+                            log.info("正式订单最多赚" + maxMoney2 + prop.money + "," + orderPair + "对订单(不值得/看不上)----------------------");
+                        }
+                    } else {//如果平台没有备份挂单,说明平台上没有资金
+                        if (totalDepth.getBidList().size() == 0) {
+                            log.info("平台资金" + prop.goods + "已耗尽----------------------");
+                        }
+                        if (totalDepth.getAskList().size() == 0) {
+                            log.info("平台资金" + prop.money + "已耗尽----------------------");
+                        }
+
                     }
                 } else {
-                    log.info("最多赚" + maxMoney + "," + diffPriceDirection_maxPrice + "----------------------最大差价"
-                            + prop.fmt_money.format(diffPrice_max));
+                    log.info("最多赚" + maxMoney + prop.money + "," + diffPriceDirection_maxPrice
+                            + "----------------------最大差价" + prop.fmt_money.format(diffPrice_max) + prop.money);
                 }
 
                 // 检查goods总数量,如果不跟初始值相等,就立即买卖调整
@@ -488,11 +501,11 @@ public class Engine {
                     throw new Exception("本次超时！耗时" + (useTime / 1000.0) + "秒++++++++++++++++++++++++++++++++++++++");
                 } else if (useTime > (time_oneCycle * 1000)) {
                     log.warn("xxxxxxxxxxxxxx本次超时！耗时" + (useTime / 1000.0) + "秒xxxxxxxxxxxxxxxtotalEarn:"
-                            + currentBalance.getTotalEarn() + "===thisEarn:" + currentBalance.getThisEarn()
-                            + " xxxxx");
+                            + currentBalance.getTotalEarn() + prop.money + "===thisEarn:" + currentBalance.getThisEarn()
+                            + prop.money + " xxxxx");
                 } else {
                     log.info("==============本次耗时" + useTime + "毫秒=======totalEarn:" + currentBalance.getTotalEarn()
-                            + "===thisEarn:" + currentBalance.getThisEarn() + "============");
+                            + prop.money + "===thisEarn:" + currentBalance.getThisEarn() + prop.money + "============");
                 }
                 //检测亏损
                 if (currentBalance.getThisEarn() <= -60.0 / prop.moneyPrice) {
@@ -598,7 +611,7 @@ public class Engine {
             changeLimit.adjust2(diffPrice, amount, arrayIndex, ask, bid);
             changeLimit.adjust3(diffPrice, amount, arrayIndex, ask, bid);
         }
-        // 如果有差价,并且差价大于min_diffPrice元,就值得搬运
+        // 如果有差价,并且差价大于min_diffPrice,就值得搬运
         if (diffPrice >= priceArray[arrayIndex]) {
             // 寻找两者之中较小的挂单量
             if (amount < prop.minCoinNum) {// 如果数量太小。（在简单匹配模式，数量不可能太小。太小的已经被删除了。）
@@ -676,7 +689,7 @@ public class Engine {
         // 计算差价
         double diffPrice = bid.getPrice() - ask.getPrice();
         double amount = ask.getVolume() < bid.getVolume() ? ask.getVolume() : bid.getVolume();
-        // 如果有差价,并且差价大于min_diffPrice元,就值得搬运
+        // 如果有差价,并且差价大于min_diffPrice,就值得搬运
         if (diffPrice >= priceArray[arrayIndex]) {
             // 寻找两者之中较小的挂单量
             if (amount < prop.minCoinNum) {// 如果数量太小。（在简单匹配模式，数量不可能太小。太小的已经被删除了。）
@@ -955,7 +968,7 @@ public class Engine {
             MarketDepth depth = virtualTrade.getMarketDepth();
             MarketOrder marketOrder = new MarketOrder();
             marketOrder.setPlatId(virtualTrade.platId);
-            marketOrder.setPrice(currentBalance.getPrice() - prop.huaDian);//价格设置不不光是在这里，还要在下一轮比价时
+            marketOrder.setPrice(currentBalance.getPrice() * (1 - prop.huaDian));//价格设置不不光是在这里，还要在下一轮比价时
             marketOrder.setVolume(diffAmount);
             depth.getAskList().add(marketOrder);
             // log.info("virtual:卖单" + depth.getAskList().size());
@@ -973,7 +986,7 @@ public class Engine {
             MarketDepth depth = virtualTrade.getMarketDepth();
             MarketOrder marketOrder = new MarketOrder();
             marketOrder.setPlatId(virtualTrade.platId);
-            marketOrder.setPrice(currentBalance.getPrice() + prop.huaDian);//价格设置不不光是在这里，还要在下一轮比价时
+            marketOrder.setPrice(currentBalance.getPrice() * (1 + prop.huaDian));//价格设置不不光是在这里，还要在下一轮比价时
             marketOrder.setVolume(diffAmount);
             depth.getBidList().add(marketOrder);
             log.info("virtual:买单" + depth.getBidList().size() + ",市场均价" + currentBalance.getPrice());

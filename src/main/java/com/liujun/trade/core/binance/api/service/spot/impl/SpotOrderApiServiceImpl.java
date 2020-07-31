@@ -7,14 +7,14 @@ import com.liujun.trade.core.binance.api.bean.spot.result.QueryOrderResult;
 import com.liujun.trade.core.binance.api.client.APIClient;
 import com.liujun.trade.core.binance.api.config.APIConfiguration;
 import com.liujun.trade.core.binance.api.enums.NewOrderRespType;
-import com.liujun.trade.core.binance.api.service.spot.SpotOrderAPIServive;
+import com.liujun.trade.core.binance.api.service.spot.SpotOrderAPIService;
 import org.apache.commons.beanutils.PropertyUtils;
 
 
 /**
  * 币币订单相关接口
  **/
-public class SpotOrderApiServiceImpl implements SpotOrderAPIServive {
+public class SpotOrderApiServiceImpl implements SpotOrderAPIService {
     private final APIClient client;
     private final SpotOrderAPI spotOrderAPI;
 

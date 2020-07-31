@@ -14,7 +14,7 @@ public class TestBinance extends SpringTest {
     @Autowired
     Engine engine;
 
-    @BeforeEach
+    @BeforeAll
      void init() {
         for (Trade trade : engine.platList) {
             if (trade.getPlatName().equals(Trade_binance.platName)) {

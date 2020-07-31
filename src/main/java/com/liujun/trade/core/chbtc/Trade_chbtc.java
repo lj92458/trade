@@ -203,7 +203,7 @@ public class Trade_chbtc extends Trade {
 
                 // 为了确保能成交，可以将卖单价格降低。买单不能动。因为可能导致money不够。
                 double addPrice = (tradeType == 0 ? -1 * prop.huaDian2 : prop.huaDian2);
-                String paramStr = "method=order&accesskey=" + apiKey + "&price=" + (order.getPrice() + addPrice) + "&amount=" + (order.getVolume() - 0.00) + "&tradeType=" + tradeType
+                String paramStr = "method=order&accesskey=" + apiKey + "&price=" + (order.getPrice()*(1 + addPrice)) + "&amount=" + (order.getVolume() - 0.00) + "&tradeType=" + tradeType
                         + "&currency=btc";
                 String secret = EncryDigestUtil.digest(secretKey);
                 String sign = EncryDigestUtil.hmacSign(paramStr, secret);

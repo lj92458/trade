@@ -69,8 +69,8 @@ public class Trade_huobi extends Trade {
         options.setUrl(url_prex);
         syncRequestClient = SyncRequestClient.create(apiKey, secretKey, options);
 
-
-        coinPair = prop.goods + prop.money;
+        String money2 = prop.money.endsWith("btc") ? "btc" : prop.money;
+        coinPair = prop.goods + money2;
         try {
             // 初始查询账户信息。今后只有交易后,才需要重新查询。
             flushAccountInfo();
@@ -195,7 +195,7 @@ public class Trade_huobi extends Trade {
             NewOrderRequest request = new NewOrderRequest(coinPair, AccountType.SPOT,
                     order.getType().equals("buy") ? OrderType.BUY_LIMIT : OrderType.SELL_LIMIT,
                     new BigDecimal(order.getVolume() + 0),
-                    new BigDecimal(order.getPrice() + addPrice));
+                    new BigDecimal(order.getPrice() * (1 + addPrice)));
 
 
             batch.add(request);

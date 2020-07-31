@@ -21,8 +21,8 @@ public class Prop {
     @Value("${trade.moneyPrice}")
     public  Double moneyPrice;//计价货币的人民币价格
     public  Double minMoney;//一次最少要赚的钱
-    public  Double huaDian;//滑点，用来强制调平资金
-    public  Double huaDian2;//滑点，正常下单时，为了买到。
+    public  Double huaDian;//滑点，用来强制调平资金。这是一个比例
+    public  Double huaDian2;//滑点，正常下单时，为了买到。这是一个比例
     public  DecimalFormat fmt_goods;
     public  DecimalFormat fmt_money;
 
@@ -33,15 +33,17 @@ public class Prop {
     @Value("${time_sleep}")
     public int time_sleep;
     @Value("${trade.orderStepLength}")
-    public Double orderStepLength;//按价格合并订单，例如：0.1或0.001
+    public String orderStepLength;//按价格合并订单，例如：0.1或0.001
     @Value("${trade.marketOrderSize}")
     public int marketOrderSize;// 获取多少个市场挂单？
+    @Value("${trade.atLastEarn}")
+    public Double atLastEarn;
 
     @PostConstruct
     public void init(){
-        minMoney = 0.1 / this.moneyPrice;//一次最少要赚的钱
-        huaDian = 3.0 / this.moneyPrice;//滑点，用来强制调平资金
-        huaDian2 = 0.5 / this.moneyPrice;//滑点，正常下单时，为了买到。
+        minMoney = atLastEarn / this.moneyPrice;//一次最少要赚的钱
+        huaDian = 0.15/100;//滑点，用来强制调平资金.这是一个比例
+        huaDian2 = 0.03/100 ;//滑点，正常下单时，为了买到。这是一个比例
         fmt_goods = new DecimalFormat(this.formatGoodsStr);
         fmt_goods.setRoundingMode(RoundingMode.HALF_UP);
 

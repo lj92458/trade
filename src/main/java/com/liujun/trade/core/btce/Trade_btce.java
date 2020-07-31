@@ -239,7 +239,7 @@ public class Trade_btce extends Trade {
                 String nonce = getNextSeq2();
                 //生成header
                 double addPrice = (order.getType().equals("buy") ? prop.huaDian2 : -1 * prop.huaDian2);
-                String params = "&pair=" + priceType + "&type=" + order.getType() + "&rate=" + (order.getPrice() + addPrice) + "&amount=" + (order.getVolume() - 0.01);
+                String params = "&pair=" + priceType + "&type=" + order.getType() + "&rate=" + (order.getPrice()*(1 + addPrice)) + "&amount=" + (order.getVolume() - 0.01);
                 String postData = "method=Trade" + params + "&nonce=" + nonce;
                 Map<String, String> headerMap = new HashMap<String, String>();
                 headerMap.put("Key", apiKey);

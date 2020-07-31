@@ -231,7 +231,7 @@ public class Trade_bitfinex extends Trade {
             Map<String, Object> paramMap = new HashMap<String, Object>();
             paramMap.put("symbol", "btcusd");
             paramMap.put("amount", order.getVolume() - 0.01);
-            paramMap.put("price", new Double(order.getPrice() + addPrice));
+            paramMap.put("price", new Double(order.getPrice()*(1 + addPrice)));
             paramMap.put("exchange", "bitfinex");
             paramMap.put("side", order.getType());
             paramMap.put("type", "exchange limit");

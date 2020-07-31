@@ -36,6 +36,7 @@ import javax.annotation.PostConstruct;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+
 @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
 @Component
 @Scope("prototype")
@@ -94,7 +95,8 @@ public class Trade_okcoin extends Trade {
         this.spotAccountAPIService = new SpotAccountAPIServiceImpl(this.config);
         this.spotOrderAPIServive = new SpotOrderApiServiceImpl(this.config);
         this.accountAPIService = new AccountAPIServiceImpl(this.config);
-        coinPair = prop.goods.toUpperCase() + "-" + prop.money.toUpperCase();
+        String money2 = prop.money.endsWith("btc") ? "btc" : prop.money;
+        coinPair = prop.goods.toUpperCase() + "-" + money2.toUpperCase();
         try {
             // 初始查询账户信息。今后只有交易后,才需要重新查询。
             flushAccountInfo();
@@ -104,7 +106,7 @@ public class Trade_okcoin extends Trade {
             log.error(getPlatName() + " : " + e.getMessage(), e);
         }
 
-        initSuccess =true;
+        initSuccess = true;
     }
 
     /**
@@ -216,7 +218,7 @@ public class Trade_okcoin extends Trade {
 
             PlaceOrderParam orderParam = new PlaceOrderParam();
             orderParam.setInstrument_id(coinPair);
-            orderParam.setPrice(Double.toString(order.getPrice() + addPrice));
+            orderParam.setPrice(Double.toString(order.getPrice() * (1 + addPrice)));
             orderParam.setType("limit");
             orderParam.setSide(order.getType());
             orderParam.setSize(Double.toString(order.getVolume() - 0.00));

@@ -57,9 +57,9 @@
     <!-- 可搬运-日志Appender定义 -->
     <appender name="need_trade"
               class="ch.qos.logback.core.rolling.RollingFileAppender">
-        <file>${USER_HOME}/need_trade.txt</file>
+        <file>${log.base}/need_trade.txt</file>
         <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
-            <fileNamePattern>${USER_HOME}/%d{yyyy-MM-dd}/need_trade.txt.%i
+            <fileNamePattern>${log.base}/%d{yyyy-MM-dd}/need_trade.txt.%i
             </fileNamePattern>
             <maxFileSize>30MB</maxFileSize>
             <maxHistory>60</maxHistory>
@@ -75,9 +75,9 @@
     <!-- 已搬运-日志Appender定义 -->
     <appender name="have_trade"
               class="ch.qos.logback.core.rolling.RollingFileAppender">
-        <file>${USER_HOME}/have_trade.txt</file>
+        <file>${log.base}/have_trade.txt</file>
         <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
-            <fileNamePattern>${USER_HOME}/%d{yyyy-MM-dd}/have_trade.txt.%i
+            <fileNamePattern>${log.base}/%d{yyyy-MM-dd}/have_trade.txt.%i
             </fileNamePattern>
             <maxFileSize>30MB</maxFileSize>
             <maxHistory>60</maxHistory>
@@ -92,9 +92,9 @@
     <!-- 差价-日志Appender定义 -->
     <appender name="diff_price"
               class="ch.qos.logback.core.rolling.RollingFileAppender">
-        <file>${USER_HOME}/diff_price.txt</file>
+        <file>${log.base}/diff_price.txt</file>
         <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
-            <fileNamePattern>${USER_HOME}/%d{yyyy-MM-dd}/diff_price.txt.%i
+            <fileNamePattern>${log.base}/%d{yyyy-MM-dd}/diff_price.txt.%i
             </fileNamePattern>
             <maxFileSize>30MB</maxFileSize>
             <maxHistory>60</maxHistory>
@@ -108,9 +108,9 @@
     <!-- 各平台价格与平均值之间的偏差-日志Appender定义 -->
     <appender name="avgDiff"
               class="ch.qos.logback.core.rolling.RollingFileAppender">
-        <file>${USER_HOME}/avgDiff.txt</file>
+        <file>${log.base}/avgDiff.txt</file>
         <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
-            <fileNamePattern>${USER_HOME}/%d{yyyy-MM-dd}/avgDiff.txt.%i
+            <fileNamePattern>${log.base}/%d{yyyy-MM-dd}/avgDiff.txt.%i
             </fileNamePattern>
             <maxFileSize>30MB</maxFileSize>
             <maxHistory>60</maxHistory>
@@ -126,9 +126,9 @@
     <!-- 限价调整日志 -->
     <appender name="changeLimit"
               class="ch.qos.logback.core.rolling.RollingFileAppender">
-        <file>${USER_HOME}/changeLimit.txt</file>
+        <file>${log.base}/changeLimit.txt</file>
         <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
-            <fileNamePattern>${USER_HOME}/%d{yyyy-MM-dd}/changeLimit.txt.%i
+            <fileNamePattern>${log.base}/%d{yyyy-MM-dd}/changeLimit.txt.%i
             </fileNamePattern>
             <maxFileSize>30MB</maxFileSize>
             <maxHistory>60</maxHistory>
@@ -141,42 +141,35 @@
     </appender>
     <!-- 应用 Logger节点定义======================================================== -->
 
-    <logger name="com.okcoin" level="info" additivity="false">
-        <appender-ref ref="ROOT_FILE"/>
-        <appender-ref ref="STDOUT"></appender-ref>
-        <!-- <appender-ref ref="okcoin_file" /> -->
-    </logger>
-
-    <logger name="com.chbtc" level="info" additivity="false">
-        <appender-ref ref="ROOT_FILE"/>
-        <appender-ref ref="STDOUT"></appender-ref>
-        <!-- <appender-ref ref="chbtc_file" /> -->
-    </logger>
-
     <logger name="need_trade" level="info" additivity="false">
+        <appender-ref ref="root_webSocket"/>
         <appender-ref ref="ROOT_FILE"/>
-        <appender-ref ref="STDOUT"></appender-ref>
+
         <appender-ref ref="need_trade"/>
     </logger>
 
     <logger name="have_trade" level="info" additivity="false">
+        <appender-ref ref="root_webSocket"/>
         <appender-ref ref="ROOT_FILE"/>
-        <appender-ref ref="STDOUT"></appender-ref>
+
         <appender-ref ref="have_trade"/>
     </logger>
 
     <logger name="diff_price" level="error" additivity="false">
+        <appender-ref ref="root_webSocket"/>
         <appender-ref ref="ROOT_FILE"/>
-        <appender-ref ref="STDOUT"></appender-ref>
+
         <appender-ref ref="diff_price"/>
     </logger>
     <logger name="avgDiff" level="info" additivity="false">
         <appender-ref ref="avgDiff"/>
     </logger>
     <logger name="changeLimit" level="info" additivity="false">
+        <appender-ref ref="root_webSocket"/>
         <appender-ref ref="ROOT_FILE"/>
-        <appender-ref ref="STDOUT"/>
+
         <appender-ref ref="changeLimit"/>
+
     </logger>
     <!-- 日志过滤 -->
     <logger name="org.springframework">

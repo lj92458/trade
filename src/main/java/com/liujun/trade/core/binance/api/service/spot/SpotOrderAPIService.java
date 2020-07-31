@@ -6,7 +6,7 @@ import com.liujun.trade.core.binance.api.bean.spot.result.CancelOrderResult;
 import com.liujun.trade.core.binance.api.bean.spot.result.QueryOrderResult;
 import retrofit2.http.Query;
 
-public interface SpotOrderAPIServive {
+public interface SpotOrderAPIService {
 
     AddOrderResultACK addOrderACK(PlaceOrderParam param) throws Exception;
 

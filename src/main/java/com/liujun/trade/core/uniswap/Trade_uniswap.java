@@ -1,26 +1,26 @@
-package com.liujun.trade.core.binance;
+package com.liujun.trade.core.uniswap;
 
 import com.liujun.trade.core.Prop;
 import com.liujun.trade.core.Trade;
-import com.liujun.trade.core.binance.api.bean.spot.param.PlaceOrderParam;
-import com.liujun.trade.core.binance.api.bean.wallet.param.WithdrawParam;
-import com.liujun.trade.core.binance.api.bean.spot.result.*;
-import com.liujun.trade.core.binance.api.bean.wallet.result.WithdrawResult;
-import com.liujun.trade.core.binance.api.config.APIConfiguration;
-import com.liujun.trade.core.binance.api.enums.*;
-import com.liujun.trade.core.binance.api.service.spot.SpotAccountAPIService;
-import com.liujun.trade.core.binance.api.service.spot.SpotOrderAPIService;
-import com.liujun.trade.core.binance.api.service.spot.SpotProductAPIService;
-import com.liujun.trade.core.binance.api.service.spot.impl.SpotAccountAPIServiceImpl;
-import com.liujun.trade.core.binance.api.service.spot.impl.SpotOrderApiServiceImpl;
-import com.liujun.trade.core.binance.api.service.spot.impl.SpotProductAPIServiceImpl;
-import com.liujun.trade.core.binance.api.service.wallet.WalletAPIService;
-import com.liujun.trade.core.binance.api.service.wallet.impl.WalletAPIServiceImpl;
-import com.liujun.trade.core.binance.api.utils.DateUtils;
+
+import com.liujun.trade.core.uniswap.api.service.WalletAPIService;
+import com.liujun.trade.core.uniswap.api.bean.WithdrawParam;
+import com.liujun.trade.core.uniswap.api.bean.WithdrawResult;
 import com.liujun.trade.core.modle.AccountInfo;
 import com.liujun.trade.core.modle.MarketDepth;
 import com.liujun.trade.core.modle.MarketOrder;
 import com.liujun.trade.core.modle.UserOrder;
+import com.liujun.trade.core.uniswap.api.bean.APIConfiguration;
+import com.liujun.trade.core.uniswap.api.bean.Account;
+import com.liujun.trade.core.uniswap.api.bean.AddOrderResult;
+import com.liujun.trade.core.uniswap.api.bean.Book;
+import com.liujun.trade.core.uniswap.api.service.AccountAPIService;
+import com.liujun.trade.core.uniswap.api.service.OrderAPIService;
+import com.liujun.trade.core.uniswap.api.service.ProductAPIService;
+import com.liujun.trade.core.uniswap.api.service.impl.AccountAPIServiceImpl;
+import com.liujun.trade.core.uniswap.api.service.impl.OrderApiServiceImpl;
+import com.liujun.trade.core.uniswap.api.service.impl.ProductAPIServiceImpl;
+import com.liujun.trade.core.uniswap.api.service.impl.WalletAPIServiceImpl;
 import com.liujun.trade.core.util.HttpUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -32,57 +32,42 @@ import javax.annotation.PostConstruct;
 import java.util.ArrayList;
 import java.util.List;
 
- /*
-
-    API接口文档(包含杠杆）：https://binance-docs.github.io/apidocs/spot/en/#general-info
-期货接口文档：https://binance-docs.github.io/apidocs/futures/cn/#185368440e
-API报错自查链接：https://github.com/binance-exchange/binance-official-api-docs/blob/f92d9df35cd926a3514618666ca6ca494c1a734d/errors_CN.md
-API交易规则说明：https://binance.zendesk.com/hc/zh-cn/articles/115003235691
-API常见问题 (FAQ)：https://binance.zendesk.com/hc/zh-cn/articles/360004492232
-     */
-
 @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
 @Component
 @Scope("prototype")
-public class Trade_binance extends Trade {
-    private static final Logger log = LoggerFactory.getLogger(Trade_binance.class);
+public class Trade_uniswap extends Trade {
+    private static final Logger log = LoggerFactory.getLogger(Trade_uniswap.class);
     private static final Logger log_haveTrade = LoggerFactory.getLogger("have_trade");
-    public static final String platName = "binance";
+    public static final String platName = "uniswap";
 
 
     // ===============================
     private APIConfiguration config;
-    private SpotProductAPIService spotProductAPIService;
-    private SpotAccountAPIService spotAccountAPIService;
-    private SpotOrderAPIService spotOrderAPIService;
+    private ProductAPIService productAPIService;
+    private AccountAPIService accountAPIService;
+    private OrderAPIService orderAPIService;
     private WalletAPIService walletAPIService;
     /**
      * 网址前缀
      */
-    @Value("${binance.url}")
+    @Value("${uniswap.url}")
     private String url_prex;
 
+    @Value("${uniswap.ethAddress}")
+    private String ethAddress;
     /**
      * 批量下单的最大批量
      */
     private int max_batch_amount_trad = 10;
-    /**
-     * 信息传递的最大延迟（毫秒）
-     */
-    private long recvWindow = 5000;
 
 
-    @Value("${binance.apiKey}")
-    private String apiKey;
-    @Value("${binance.secretKey}")
-    private String secretKey;
-    @Value("${binance.feeRate}")
+    @Value("${uniswap.feeRate}")
     private double feeRate;
     private String coinPair;
     //------------------------
 
 
-    public Trade_binance(HttpUtil httpUtil, int platId, double usdRate, Prop prop) throws Exception {
+    public Trade_uniswap(HttpUtil httpUtil, int platId, double usdRate, Prop prop) throws Exception {
         super(httpUtil, platId, usdRate, prop);
 
 
@@ -91,34 +76,30 @@ public class Trade_binance extends Trade {
     @PostConstruct
     private void init() {
         this.config = new APIConfiguration();
-        config.setEndpoint(url_prex);
-        config.setApiKey(apiKey);
-        config.setSecretKey(secretKey);
+        config.setUri(url_prex);
+        config.setAddress(ethAddress);
 
-
-        config.setPrint(false);
-        config.setI18n(I18nEnum.SIMPLIFIED_CHINESE);
-        this.spotProductAPIService = new SpotProductAPIServiceImpl(this.config);
-        this.spotAccountAPIService = new SpotAccountAPIServiceImpl(this.config);
-        this.spotOrderAPIService = new SpotOrderApiServiceImpl(this.config);
-        this.walletAPIService = new WalletAPIServiceImpl(this.config);
-        String money2 = prop.money.endsWith("btc") ? "btc" : prop.money;
-        coinPair = prop.goods.toUpperCase() + money2.toUpperCase();
+        this.productAPIService = new ProductAPIServiceImpl(this.config);
+        this.orderAPIService = new OrderApiServiceImpl(this.config);
+        this.accountAPIService = new AccountAPIServiceImpl(this.config);
+        this.walletAPIService= new WalletAPIServiceImpl(this.config);
+        coinPair = prop.goods + "-" + prop.money;
         try {
             // 初始查询账户信息。今后只有交易后,才需要重新查询。
             flushAccountInfo();
-        } catch (Exception e) {
-            log.error(getPlatName() + " : " + e.getMessage(), e);
 
+        } catch (Exception e) {
+
+            log.error(getPlatName() + " : " + e.getMessage(), e);
         }
 
-        this.initSuccess = true;
+        initSuccess = true;
     }
 
     /**
      * 查询市场深度,填充marketDepth属性。Get
      *
-     * @throws Exception
+     * @throws Exception aa
      */
     public void flushMarketDeeps() throws Exception {
         // 初始化,清空
@@ -126,24 +107,24 @@ public class Trade_binance extends Trade {
         depth.getAskList().clear();
         depth.getBidList().clear();
         try {
+            Book book = productAPIService.bookProductsByProductId(coinPair, prop.marketOrderSize + "", "" + prop.orderStepLength);
 
-            Depth depthResult = spotProductAPIService.marketDepth(coinPair, prop.marketOrderSize);
             // 卖方挂单
-            List<String[]> askArr = depthResult.getAsks();
-            for (int i = 0; i < askArr.size(); i++) {
+            List<String[]> askArr = book.getAsks();
+            for (String[] value : askArr) {
                 MarketOrder marketOrder = new MarketOrder();// 一个挂单
-                marketOrder.setPrice(Double.parseDouble(askArr.get(i)[0]));
-                marketOrder.setVolume(Double.parseDouble(askArr.get(i)[1]));
+                marketOrder.setPrice(Double.parseDouble(value[0]));
+                marketOrder.setVolume(Double.parseDouble(value[1]));
                 marketOrder.setPlatId(platId);
 
                 depth.getAskList().add(marketOrder);
             }
             // 买方挂单
-            List<String[]> bidArr = depthResult.getBids();
-            for (int i = 0; i < bidArr.size(); i++) {
+            List<String[]> bidArr = book.getBids();
+            for (String[] strings : bidArr) {
                 MarketOrder marketOrder = new MarketOrder();// 一个挂单
-                marketOrder.setPrice(Double.parseDouble(bidArr.get(i)[0]));
-                marketOrder.setVolume(Double.parseDouble(bidArr.get(i)[1]));
+                marketOrder.setPrice(Double.parseDouble(strings[0]));
+                marketOrder.setVolume(Double.parseDouble(strings[1]));
                 marketOrder.setPlatId(platId);
 
                 depth.getBidList().add(marketOrder);
@@ -169,19 +150,15 @@ public class Trade_binance extends Trade {
     public void flushAccountInfo() throws Exception {
         try {
             AccountInfo accountInfo = new AccountInfo();
-            Account account = spotAccountAPIService.accountInfo(recvWindow);
-            if (!account.getAccountType().equalsIgnoreCase(SymbolType.SPOT.toString())) {
-                throw new Exception("当前账户不是spot账户");
-            }
-
-            for (Balance bal : account.getBalance()) {
-                if (bal.getAsset().equalsIgnoreCase(prop.goods)) {
-                    accountInfo.setFreeGoods(Double.parseDouble(bal.getFree()));
-                    accountInfo.setFreezedGoods(Double.parseDouble(bal.getLocked()));
+            List<Account> list = accountAPIService.getAccounts(prop.goods, prop.money);
+            for (Account acc : list) {
+                if (acc.getCurrency().equalsIgnoreCase(prop.goods)) {
+                    accountInfo.setFreeGoods(Double.parseDouble(acc.getAvailable()));
+                    accountInfo.setFreezedGoods(Double.parseDouble(acc.getHold()));
                 }
-                if (bal.getAsset().equalsIgnoreCase(prop.money)) {
-                    accountInfo.setFreeMoney(Double.parseDouble(bal.getFree()));
-                    accountInfo.setFreezedMoney(Double.parseDouble(bal.getLocked()));
+                if (acc.getCurrency().equalsIgnoreCase(prop.money)) {
+                    accountInfo.setFreeMoney(Double.parseDouble(acc.getAvailable()));
+                    accountInfo.setFreezedMoney(Double.parseDouble(acc.getHold()));
                 }
             }
             //
@@ -215,17 +192,10 @@ public class Trade_binance extends Trade {
 
             // 为了确保能成交，可以将卖单价格降低。买单不能动。因为可能导致money不够。
             double addPrice = (order.getType().equals("sell") ? -1 * prop.huaDian2 : prop.huaDian2);
-            PlaceOrderParam param = new PlaceOrderParam();
-            param.setSymbol(coinPair);//symbol
-            param.setSide(Enum.valueOf(OrderSide.class, order.getType().toUpperCase()));// orderSide
-            param.setType(OrderType.LIMIT);// orderType
-            param.setTimestamp(DateUtils.getUnixTimeMilli());//
-            param.setTimeInForce(TimeInForce.GTC);//timeInForce
-            param.setQuantity(order.getVolume() - 0.00);// quantity
-            param.setPrice(order.getPrice() * (1 + addPrice));// price
-            param.setRecvWindow(recvWindow);// recvWindow
 
-            AddOrderResultACK result = this.spotOrderAPIService.addOrderACK(param);
+            AddOrderResult result = this.orderAPIService.addOrder(coinPair, order.getType(),
+                    (order.getPrice() * (1 + addPrice)) + "",
+                    order.getVolume() + "");
             // 设置orderId
 
             order.setOrderId("" + result.getOrderId());
@@ -247,9 +217,8 @@ public class Trade_binance extends Trade {
 
         // 查询完全成交的
         for (UserOrder o : userOrderList) {
-            QueryOrderResult result = spotOrderAPIService.queryOrder(coinPair, Long.parseLong(o.getOrderId()),
-                    null, recvWindow, DateUtils.getUnixTimeMilli());
-            if (result.getStatus().equals(OrderStatus.FILLED.toString())) {
+            String status = orderAPIService.queryOrder(coinPair, o.getOrderId());
+            if (status.equals("success")) {
                 o.setFinished(true);
             }
         }
@@ -285,18 +254,16 @@ public class Trade_binance extends Trade {
                 haveEarn += order.getDiffPrice() * order.getVolume();
             }
         }// end for
-        log.info("-----binance已删掉" + finishedList.size() + "个已成交的,还剩" + userOrderList.size() + "个未成交");
-        log_haveTrade.info("binance++++++++++++++至少赚了" + prop.formatMoney(haveEarn) + ". 完全成交" + finishedList.size() + "个订单：" + finishedList.toString());
+        log.info("-----uniswap已删掉" + finishedList.size() + "个已成交的,还剩" + userOrderList.size() + "个未成交");
+        log_haveTrade.info("uniswap++++++++++++++至少赚了" + prop.formatMoney(haveEarn) + ". 完全成交" + finishedList.size() + "个订单：" + finishedList.toString());
 
         // userOrderList里面剩下的是没完全成交的,全部撤单。一次最多撤10个
 
         for (UserOrder o : userOrderList) {
-            CancelOrderResult result = this.spotOrderAPIService.cancelOrder(coinPair, Long.parseLong(o.getOrderId()),
-                    null, null, recvWindow, DateUtils.getUnixTimeMilli());
+            orderAPIService.cancelOrder(coinPair, o.getOrderId());
 
 
         }
-
 
     }
 
@@ -311,13 +278,11 @@ public class Trade_binance extends Trade {
      */
     @Override
     public void withdraw(String productName, double amount, String address) throws Exception {
-
         WithdrawParam param = new WithdrawParam();
         param.setAsset(productName);
         param.setAddress(address);
         param.setAmount(amount);
-        param.setRecvWindow(recvWindow);
-        param.setTimestamp(DateUtils.getUnixTimeMilli());
+
 
         WithdrawResult result = this.walletAPIService.withdraw(param);
         if (result.isSuccess()) {
@@ -326,8 +291,5 @@ public class Trade_binance extends Trade {
             log.error("提币失败：" + result.getMsg());
             throw new Exception("提币失败：" + result.getMsg());
         }
-
     }
-
-
 }

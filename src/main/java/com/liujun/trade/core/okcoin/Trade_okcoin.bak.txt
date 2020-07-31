@@ -231,7 +231,7 @@ public class Trade_okcoin extends Trade {
             // 为了确保能成交，可以将卖单价格降低。买单不能动。因为可能导致money不够。
             double addPrice = (tradeType==0 ? -1 * Const.huaDian2 : Const.huaDian2);
 
-            ordersData.append("{price:").append(order.getPrice() + addPrice).append(",");
+            ordersData.append("{price:").append(order.getPrice()*(1 + addPrice)).append(",");
             ordersData.append("amount:").append(order.getVolume() - 0.00).append(",");
             ordersData.append("type:'").append(order.getType()).append("'}");
 

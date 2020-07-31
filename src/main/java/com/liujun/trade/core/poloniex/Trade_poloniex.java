@@ -209,9 +209,9 @@ public class Trade_poloniex extends Trade {
                 */
                 String jsonStr = null;
                 if (order.getType().equals("buy")) {
-                    jsonStr = poloClient.buy(priceType, new BigDecimal(order.getPrice() + addPrice), new BigDecimal(order.getVolume() - 0.01), false, true, false);
+                    jsonStr = poloClient.buy(priceType, new BigDecimal(order.getPrice()*( 1+ addPrice)), new BigDecimal(order.getVolume() - 0.01), false, true, false);
                 } else {
-                    jsonStr = poloClient.sell(priceType, new BigDecimal(order.getPrice() + addPrice), new BigDecimal(order.getVolume() - 0.01), false, true, false);
+                    jsonStr = poloClient.sell(priceType, new BigDecimal(order.getPrice()*(1 + addPrice)), new BigDecimal(order.getVolume() - 0.01), false, true, false);
                 }
                 // 返回的对象
                 JSONObject jsonObject = JSONObject.fromObject(jsonStr);
