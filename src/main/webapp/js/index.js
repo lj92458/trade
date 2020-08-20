@@ -1,4 +1,4 @@
-var avgDiff_maxCell=500;
+var avgDiff_maxCell = 500;
 $(document).ready(function () {
     initPage();
     load(5, avgDiff_maxCell);
@@ -54,11 +54,11 @@ var showEchart = function (legend_dataArr, xAxis_dataArr, seriesArr) {
 }//end function
 
 var load = function (timeUnit, maxCell) {
-    $.getJSON('./engine/queryDiffPrice',
+    $.getJSON(contextPath + '/engine/queryDiffPrice',
         {unit: timeUnit, maxCell: maxCell},
         function (data) {
             if (data.retCode != '0000') {// 如果有异常消息
-                alert('queryDiffPrice:'+data.retCode+':'+data.retMsg);
+                alert('queryDiffPrice:' + data.retCode + ':' + data.retMsg);
             } else {
                 showEchart(data.legend, data.xAxis, data.series);
                 $('#balance').text('总收入：' + data.totalEarn + ',最近收入：' + data.thisEarn);
@@ -69,7 +69,7 @@ var load = function (timeUnit, maxCell) {
                     var platName = data.legend[i];
                     $('#table_adjPrice').append(
                         '<tr>' +
-                        '<td>' + platName + ':</td>\n'+
+                        '<td>' + platName + ':</td>\n' +
                         ' <td> <input type="text" name="adjustPrice" id="' + platName + '" value="' + data.adjustPrice[platName] + '"  >' +
                         '<span></span> </td>\n' +
                         '</tr>\n'
@@ -95,7 +95,7 @@ var initPage = function () {
             priceStr += $(inputArr[i]).attr('id') + ':' + $(inputArr[i]).val();
         }
         priceStr = priceStr.substr(1);
-        $.post('/engine/adjustPrice',
+        $.post(contextPath + '/engine/adjustPrice',
             {
                 adjustPrice: priceStr
 
@@ -109,7 +109,7 @@ var initPage = function () {
     //启动
     $('#start').bind('click', function () {
         $('#retMsg').html('正在启动...请等待5秒');
-        $.post('/engine/start',
+        $.post(contextPath + '/engine/start',
             {},
             function (data) {
                 $('#retMsg').html(data.retMsg);
@@ -120,7 +120,7 @@ var initPage = function () {
     });
     //停止
     $('#stop').bind('click', function () {
-        $.post('/engine/stop',
+        $.post(contextPath + '/engine/stop',
             {},
             function (data) {
                 $('#retMsg').html(data.retMsg);

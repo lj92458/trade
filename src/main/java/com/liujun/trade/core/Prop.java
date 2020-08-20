@@ -36,13 +36,15 @@ public class Prop {
     public String orderStepLength;//按价格合并订单，例如：0.1或0.001
     @Value("${trade.marketOrderSize}")
     public int marketOrderSize;// 获取多少个市场挂单？
-    @Value("${trade.atLastEarn}")
-    public Double atLastEarn;
+    @Value("${trade.atLeastEarn}")
+    public Double atLeastEarn;
+    @Value("${trade.atLeastRate}")
+    public double atLeastRate;//最低利润率(差价除以价格)
 
     @PostConstruct
     public void init(){
-        minMoney = atLastEarn / this.moneyPrice;//一次最少要赚的钱
-        huaDian = 0.15/100;//滑点，用来强制调平资金.这是一个比例
+        minMoney = atLeastEarn / this.moneyPrice;//一次最少要赚的钱
+        huaDian = 0.3/100;//滑点，用来强制调平资金.这是一个比例
         huaDian2 = 0.03/100 ;//滑点，正常下单时，为了买到。这是一个比例
         fmt_goods = new DecimalFormat(this.formatGoodsStr);
         fmt_goods.setRoundingMode(RoundingMode.HALF_UP);

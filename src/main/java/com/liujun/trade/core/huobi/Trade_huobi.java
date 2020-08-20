@@ -8,6 +8,7 @@ import com.huobi.client.model.enums.BalanceType;
 import com.huobi.client.model.enums.OrderState;
 import com.huobi.client.model.enums.OrderType;
 import com.huobi.client.model.request.NewOrderRequest;
+import com.liujun.trade.core.Engine;
 import com.liujun.trade.core.Prop;
 import com.liujun.trade.core.Trade;
 import com.liujun.trade.core.modle.AccountInfo;
@@ -58,8 +59,8 @@ public class Trade_huobi extends Trade {
     //==================  ======================
 
 
-    public Trade_huobi(HttpUtil httpUtil, int platId, double usdRate, Prop prop) throws Exception {
-        super(httpUtil, platId, usdRate, prop);
+    public Trade_huobi(HttpUtil httpUtil, int platId, double usdRate, Prop prop, Engine engine) throws Exception {
+        super(httpUtil, platId, usdRate, prop, engine);
 
     }
 
@@ -294,7 +295,9 @@ public class Trade_huobi extends Trade {
 
 
         }// end for
-        syncRequestClient.cancelOrders(coinPair, orderIdList);
+        if (orderIdList.size() > 0) {
+            syncRequestClient.cancelOrders(coinPair, orderIdList);
+        }
     }
 
     public String getPlatName() {

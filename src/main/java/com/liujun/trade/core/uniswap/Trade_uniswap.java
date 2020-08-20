@@ -1,5 +1,6 @@
 package com.liujun.trade.core.uniswap;
 
+import com.liujun.trade.core.Engine;
 import com.liujun.trade.core.Prop;
 import com.liujun.trade.core.Trade;
 
@@ -29,6 +30,7 @@ import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Component;
 
 import javax.annotation.PostConstruct;
+import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -55,20 +57,24 @@ public class Trade_uniswap extends Trade {
 
     @Value("${uniswap.ethAddress}")
     private String ethAddress;
+    @Value("${time_oneCycle}")
+    private int maxWaitSeconds;
     /**
      * 批量下单的最大批量
      */
     private int max_batch_amount_trad = 10;
-
+    @Value("${uniswap.gasPercent}")
+    private double gasPercent;
 
     @Value("${uniswap.feeRate}")
     private double feeRate;
     private String coinPair;
+    private double gasPriceGwei;
     //------------------------
 
 
-    public Trade_uniswap(HttpUtil httpUtil, int platId, double usdRate, Prop prop) throws Exception {
-        super(httpUtil, platId, usdRate, prop);
+    public Trade_uniswap(HttpUtil httpUtil, int platId, double usdRate, Prop prop, Engine engine) throws Exception {
+        super(httpUtil, platId, usdRate, prop, engine);
 
 
     }
@@ -78,11 +84,12 @@ public class Trade_uniswap extends Trade {
         this.config = new APIConfiguration();
         config.setUri(url_prex);
         config.setAddress(ethAddress);
+        config.setMaxWaitSeconds(80);
 
         this.productAPIService = new ProductAPIServiceImpl(this.config);
         this.orderAPIService = new OrderApiServiceImpl(this.config);
         this.accountAPIService = new AccountAPIServiceImpl(this.config);
-        this.walletAPIService= new WalletAPIServiceImpl(this.config);
+        this.walletAPIService = new WalletAPIServiceImpl(this.config);
         coinPair = prop.goods + "-" + prop.money;
         try {
             // 初始查询账户信息。今后只有交易后,才需要重新查询。
@@ -162,12 +169,68 @@ public class Trade_uniswap extends Trade {
                 }
             }
             //
-            setAccInfo(accountInfo);
+
+            super.setAccInfo(accountInfo);
+            //查询gas费，然后设置矿工费
+            double[] priceArr;
+            //如果goods是eth，就直接采用当前市场价
+            if (prop.goods.equals("eth") && getCurrentPrice() != 0) {
+                double gasPrice = productAPIService.getGasPriceGweiAndEthPrice("eth")[0];
+                double ethPrice = getCurrentPrice();
+                priceArr = new double[]{gasPrice, ethPrice};
+            } else {
+                priceArr = productAPIService.getGasPriceGweiAndEthPrice(prop.money);
+            }
+            this.gasPriceGwei = adjustGasPrice(priceArr[0]);
+            double feeInEth = 140000 * this.gasPriceGwei / 1_000_000_000;//假设需要gas14万个，那么总共需要的eth是多少？
+            //把eth价值，转化成本交易对中的money
+            double feeInMoney;
+            feeInMoney = feeInEth * priceArr[1];
+            log.info("gas价格：" + this.gasPriceGwei + "Gwei,矿工费:" + feeInMoney + prop.money + "(" + prop.formatMoney(feeInMoney * prop.moneyPrice) + "人民币)");
+            super.setFixFee(feeInMoney);
 
         } catch (Exception e) {
             log.error(getPlatName() + " : " + e.getMessage(), e);
             throw e;
         }
+
+    }
+
+    private double adjustGasPrice(double gasPrice) {
+        double percent;
+        /*
+        //乐观型策略
+        if (gasPrice < 10) {
+            percent = 100 / 100.0;
+        } else if (gasPrice < 95) {
+            percent = 88 / 100.0;
+        } else {
+            percent = 83 / 100.0;
+        }
+        */
+        /*
+        //中性策略(不乐观不悲观)
+        if (gasPrice < 10) {
+            percent = 100 / 100.0;
+        } else if (gasPrice < 95) {
+            percent = 93 / 100.0;
+        } else {
+            percent = 88 / 100.0;
+        }
+         */
+        /*
+        //悲观型策略
+        if (gasPrice < 10) {
+            percent = 100 / 100.0;
+        } else if (gasPrice < 95) {
+            percent = 95 / 100.0;
+        } else {
+            percent = 91 / 100.0;
+        }
+        */
+
+        percent = gasPercent;
+        return Double.parseDouble(new DecimalFormat("0.0000").format(gasPrice * percent));
 
     }
 
@@ -185,6 +248,7 @@ public class Trade_uniswap extends Trade {
                 userOrderList.remove(i);// 无效订单要及时删掉，否则help_tradeOneBatch里面定位错误。但是不能在预处理时删。
             }
         }// end for
+
         merge();//对订单进行合并
         changeMyOrderPrice(1 - feeRate, 1 + feeRate);
         for (; orderCount < userOrderList.size(); orderCount++) {
@@ -195,7 +259,9 @@ public class Trade_uniswap extends Trade {
 
             AddOrderResult result = this.orderAPIService.addOrder(coinPair, order.getType(),
                     (order.getPrice() * (1 + addPrice)) + "",
-                    order.getVolume() + "");
+                    order.getVolume() + "",
+                    this.gasPriceGwei + "",
+                    super.profitRate);
             // 设置orderId
 
             order.setOrderId("" + result.getOrderId());

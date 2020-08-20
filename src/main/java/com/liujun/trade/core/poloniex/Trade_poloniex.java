@@ -1,5 +1,6 @@
 package com.liujun.trade.core.poloniex;
 
+import com.liujun.trade.core.Engine;
 import com.liujun.trade.core.Prop;
 
 import com.liujun.trade.core.Trade;
@@ -74,8 +75,8 @@ public class Trade_poloniex extends Trade {
     PoloniexTradingAPIClient poloClient;
     //-----------------------------
 
-    public Trade_poloniex(HttpUtil httpUtil, int platId, double usdRate,Prop prop) throws Exception {
-        super(httpUtil, platId, usdRate,prop);
+    public Trade_poloniex(HttpUtil httpUtil, int platId, double usdRate,Prop prop, Engine engine) throws Exception {
+        super(httpUtil, platId, usdRate,prop, engine);
         try {
             if (usdRate == 0) {
                 throw new Exception("汇率不能为0");

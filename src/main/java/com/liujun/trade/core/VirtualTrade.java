@@ -22,8 +22,8 @@ public class VirtualTrade extends Trade {
 	//---------------------------
 	private double feeRate=0;
 
-	public VirtualTrade(HttpUtil httpUtil, int platId, double usdRate,Prop prop) throws Exception {
-		super(httpUtil, platId, usdRate,prop);
+	public VirtualTrade(HttpUtil httpUtil, int platId, double usdRate,Prop prop, Engine engine) throws Exception {
+		super(httpUtil, platId, usdRate,prop, engine);
 
 		// 初始查询账户信息。今后只有交易后,才需要重新查询。
 		flushAccountInfo();

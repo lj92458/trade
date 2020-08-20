@@ -1,5 +1,6 @@
 package com.liujun.trade.core.btce;
 
+import com.liujun.trade.core.Engine;
 import com.liujun.trade.core.Prop;
 
 import com.liujun.trade.core.Trade;
@@ -23,6 +24,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
 @Component
 @Scope("prototype")
 public class Trade_btce extends Trade {
@@ -86,8 +88,8 @@ public class Trade_btce extends Trade {
 
     }
 
-    public Trade_btce(HttpUtil httpUtil, int platId, double usdRate,Prop prop) throws Exception {
-        super(httpUtil, platId, usdRate, prop);
+    public Trade_btce(HttpUtil httpUtil, int platId, double usdRate, Prop prop, Engine engine) throws Exception {
+        super(httpUtil, platId, usdRate, prop, engine);
         try {
             if (usdRate == 0) {
                 throw new Exception("汇率不能为0");
@@ -196,7 +198,7 @@ public class Trade_btce extends Trade {
             log.debug("签名" + signStr);
             headerMap.put("Sign", signStr);
             String jsonStr = HttpUtil2.httpPost(url_prex + url_userInfo, headerMap, postData);
-            log.debug("jsonStr"+jsonStr);
+            log.debug("jsonStr" + jsonStr);
             JSONObject jsonObject = JSONObject.fromObject(jsonStr);
             if (jsonObject.getInt("success") == 0) {
                 throw new Exception("返回错误消息:" + jsonObject.getString("error"));
@@ -239,7 +241,7 @@ public class Trade_btce extends Trade {
                 String nonce = getNextSeq2();
                 //生成header
                 double addPrice = (order.getType().equals("buy") ? prop.huaDian2 : -1 * prop.huaDian2);
-                String params = "&pair=" + priceType + "&type=" + order.getType() + "&rate=" + (order.getPrice()*(1 + addPrice)) + "&amount=" + (order.getVolume() - 0.01);
+                String params = "&pair=" + priceType + "&type=" + order.getType() + "&rate=" + (order.getPrice() * (1 + addPrice)) + "&amount=" + (order.getVolume() - 0.01);
                 String postData = "method=Trade" + params + "&nonce=" + nonce;
                 Map<String, String> headerMap = new HashMap<String, String>();
                 headerMap.put("Key", apiKey);

@@ -1,6 +1,8 @@
 package com.liujun.trade.core.okcoin;
 
+import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
+import com.liujun.trade.core.Engine;
 import com.liujun.trade.core.Prop;
 import com.liujun.trade.core.Trade;
 import com.liujun.trade.core.modle.AccountInfo;
@@ -75,8 +77,8 @@ public class Trade_okcoin extends Trade {
     //------------------------
 
 
-    public Trade_okcoin(HttpUtil httpUtil, int platId, double usdRate, Prop prop) throws Exception {
-        super(httpUtil, platId, usdRate, prop);
+    public Trade_okcoin(HttpUtil httpUtil, int platId, double usdRate, Prop prop, Engine engine) throws Exception {
+        super(httpUtil, platId, usdRate, prop, engine);
 
 
     }
@@ -241,7 +243,11 @@ public class Trade_okcoin extends Trade {
 
 
             // 结果数组
-            List<OrderResult> resultList = orderResult.get(coinPair);
+            List<OrderResult> resultList = orderResult.get(prop.goods + "-" + prop.money);
+
+            if (resultList == null) {
+                log.warn(JSON.toJSONString(orderResult));
+            }
             for (int j = 0; j < resultList.size(); j++) {
                 // 当前订单在userOrderList中的下标
                 int orderIndex = i * max_batch_amount_trad + j;
@@ -327,13 +333,15 @@ public class Trade_okcoin extends Trade {
         OrderParamDto dto = new OrderParamDto();
         dto.setInstrument_id(coinPair);
         List<String> order_ids = new ArrayList<>();
-        for (UserOrder userOrder : userOrderList) {
-            order_ids.add(userOrder.getOrderId());
-        }
-        dto.setOrder_ids(order_ids);
-        cancleOrders.add(dto);
+        if (userOrderList.size() > 0) {
+            for (UserOrder userOrder : userOrderList) {
+                order_ids.add(userOrder.getOrderId());
+            }
+            dto.setOrder_ids(order_ids);
+            cancleOrders.add(dto);
 
-        this.spotOrderAPIServive.cancleOrders_post(cancleOrders);
+            this.spotOrderAPIServive.cancleOrders_post(cancleOrders);
+        }
 
     }
 

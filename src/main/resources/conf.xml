@@ -2,7 +2,7 @@
 
 <conf>
     <!-- 启用的平台 -->
-    <enablePlat>okcoin,uniswap,binance</enablePlat>
+    <enablePlat>okcoin,uniswap</enablePlat>
     <lastChange>2016-01-02 10:01:01</lastChange>
     <!-- 币从bitfinex平台流向其它平台时需满足 的最小差价 。 -->
     <!-- changePrice属性为：为了在差价长期不出现反转的平台之间搬运，给查询到的市场挂单价格减去该值，给发送出去的订单加上该值。 -->

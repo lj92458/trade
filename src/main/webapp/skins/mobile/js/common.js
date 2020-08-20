@@ -17,6 +17,21 @@ $(document).ready(function(){
     //检查cookies支持
     checkCookies();
 });
+
+//ajax完成时回调函数
+$(document).ajaxComplete(function(event, xhr, settings) {
+    //从http头信息取出 在filter定义的sessionstatus，判断是否是 timeout
+    if(xhr.getResponseHeader("sessionstatus")==="timeout"){
+        //从http头信息取出登录的url ＝ loginPath
+        if(xhr.getResponseHeader("loginPath")){
+            console.log("会话过期，请重新登陆!");
+            //打会到登录页面
+            window.location.replace(xhr.getResponseHeader("loginPath"));
+        }else{
+            alert("请求超时请重新登陆 !");
+        }
+    }
+});
 //基础信息初始化
 function init(){
     if(!window.applicationCache){

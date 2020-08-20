@@ -6,7 +6,7 @@
 
 <script type="text/javascript" src="<%=contextPath%>/js/js.cookie.js"></script>
 <script type="text/javascript">
-
+var contextPath="<%=contextPath%>"
 </script>
 
 <!-- header start -->

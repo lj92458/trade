@@ -9,6 +9,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 
+import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -18,7 +19,10 @@ public abstract class Trade {
     public final int platId;
     public final double usdRate;
     protected Prop prop;
-    public boolean initSuccess =false;
+    protected Engine engine;
+    public boolean initSuccess = false;
+    public double fixFee = 0.0;//每次交易需要的固定费用(例如uniswap的矿工费)
+    public double profitRate;//利润率，也就是滑点
     /**
      * 为了在差价长期不出现翻转的平台之间搬运， 对查到的市场挂单，减去该价格，对要发送出的订单，加上该价格。
      */
@@ -53,11 +57,12 @@ public abstract class Trade {
 
 
     // ==========================================================
-    protected Trade(HttpUtil httpUtil, int platId, double usdRate, Prop prop) throws Exception {
+    protected Trade(HttpUtil httpUtil, int platId, double usdRate, Prop prop, Engine engine) throws Exception {
         this.httpUtil = httpUtil;
         this.platId = platId;
         this.usdRate = usdRate;
         this.prop = prop;
+        this.engine = engine;
     }
 
     /**
@@ -108,7 +113,7 @@ public abstract class Trade {
      *
      * @throws Exception
      */
-    public abstract void withdraw(String productName ,double amount, String address) throws Exception;
+    public abstract void withdraw(String productName, double amount, String address) throws Exception;
 
     /**
      * 将不超出账户余额的挂单保存起来
@@ -325,8 +330,37 @@ public abstract class Trade {
         return null;
     }
 
+    /**
+     * 计算利润率，也就是滑点。<h1>注意：要在merge()被调用之前就计算!!!!</h1>
+     *
+     * @return
+     */
+    public double profitRate() {
+        double totalEarn = 0;//总利润
+        double totalReserve = 0;//总交易金额
+        for (UserOrder order : userOrderList) {
+            /*
+            //如果对方没有固定费用(矿工费),可以把滑点都放到这边。否则，滑点需要减半。因为两边都要设置滑点
+            if (engine.platList.get(order.getAnotherOrder().getPlatId()).getFixFee() == 0) {
+                totalEarn += order.getVolume() * order.getDiffPrice() * 0.9;
+            } else {
+                totalEarn += (order.getVolume() * order.getDiffPrice()) / 2.0;
+            }
+             */
+            totalEarn += order.getVolume() * order.getDiffPrice();
+            totalReserve += order.getVolume() * order.getPrice();
+        }
+        totalEarn -= fixFee;
+        if (totalReserve > 0) {
+            return Double.parseDouble(new DecimalFormat("0.0000").format(totalEarn / totalReserve));
+        } else {
+            return 0;
+        }
+    }
+
     //对订单进行合并。
     protected void merge() {
+
         //将订单分成买单、卖单
         List<UserOrder> buyList = new ArrayList<UserOrder>();
         List<UserOrder> sellList = new ArrayList<UserOrder>();
@@ -414,6 +448,7 @@ public abstract class Trade {
 		*/
     }
 
+
     // ==========getter_setter========================================================
     public MarketDepth getMarketDepth() {
         return marketDepth;
@@ -467,4 +502,11 @@ public abstract class Trade {
         this.changePrice = changePrice;
     }
 
+    public double getFixFee() {
+        return fixFee;
+    }
+
+    public void setFixFee(double fixFee) {
+        this.fixFee = fixFee;
+    }
 }

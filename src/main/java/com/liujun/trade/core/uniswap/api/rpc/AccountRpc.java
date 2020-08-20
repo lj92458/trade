@@ -10,4 +10,6 @@ import java.util.List;
 public interface AccountRpc {
     //最多5秒返回结果
     Promise<List<Account>> queryTokenBalance(String ethAddress, String[] symbolArr);
+
+
 }

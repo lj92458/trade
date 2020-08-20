@@ -7,6 +7,7 @@ import hprose.client.HproseHttpClient;
  */
 public class RpcClient {
     private static RpcClient rpcClient;
+
     public static RpcClient getInstance(String uri) {
         if (rpcClient == null) {
             rpcClient = new RpcClient(uri);
@@ -19,9 +20,10 @@ public class RpcClient {
 
     private RpcClient(String uri) {
         client = new HproseHttpClient(uri);
+        client.setTimeout(40 * 60 * 1000);//40分钟超时
     }
 
-    public <T> T useService(Class<T> t){
+    public <T> T useService(Class<T> t) {
         return client.useService(t);
     }
 }

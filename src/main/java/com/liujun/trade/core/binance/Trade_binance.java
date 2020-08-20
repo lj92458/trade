@@ -1,5 +1,6 @@
 package com.liujun.trade.core.binance;
 
+import com.liujun.trade.core.Engine;
 import com.liujun.trade.core.Prop;
 import com.liujun.trade.core.Trade;
 import com.liujun.trade.core.binance.api.bean.spot.param.PlaceOrderParam;
@@ -82,8 +83,8 @@ public class Trade_binance extends Trade {
     //------------------------
 
 
-    public Trade_binance(HttpUtil httpUtil, int platId, double usdRate, Prop prop) throws Exception {
-        super(httpUtil, platId, usdRate, prop);
+    public Trade_binance(HttpUtil httpUtil, int platId, double usdRate, Prop prop, Engine engine) throws Exception {
+        super(httpUtil, platId, usdRate, prop, engine);
 
 
     }

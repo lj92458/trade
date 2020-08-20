@@ -11,4 +11,11 @@ public interface ProductAPIService {
       * @return
       */
      Book bookProductsByProductId(String coinPair, String marketOrderSize, String orderStepLength);
+
+     /**
+      * 查询gas费，以及eth相对某种币的价格
+      * @param moneySymbol 交易对中的计价货币
+      * @return
+      */
+     double[] getGasPriceGweiAndEthPrice(String moneySymbol);
 }

@@ -4,6 +4,7 @@ public class APIConfiguration {
     private String uri;//远程调用，该访问那个uri
 
     private String address;//以太账户地址
+    private int maxWaitSeconds;
 
     public String getUri() {
         return uri;
@@ -19,5 +20,13 @@ public class APIConfiguration {
 
     public void setAddress(String address) {
         this.address = address;
+    }
+
+    public int getMaxWaitSeconds() {
+        return maxWaitSeconds;
+    }
+
+    public void setMaxWaitSeconds(int maxWaitSeconds) {
+        this.maxWaitSeconds = maxWaitSeconds;
     }
 }

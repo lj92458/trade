@@ -10,71 +10,78 @@ import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Component;
 
 import java.util.concurrent.TimeUnit;
+
 @Component
 @Scope("prototype")
 public class TradeThread extends Thread {
-	private static final Logger log = LoggerFactory.getLogger(Engine.class);
-	/** 已成交 */
-	private static final Logger log_haveTrade = LoggerFactory.getLogger("have_trade");
+    private static final Logger log = LoggerFactory.getLogger(Engine.class);
+    /**
+     * 已成交
+     */
+    private static final Logger log_haveTrade = LoggerFactory.getLogger("have_trade");
 
-	// ============ 属性字段
-	private Trade trade;
-	private Engine engine;
-	/** 线程是否正常 */
-	private boolean success = false;
-	@Autowired
-	Prop prop;
+    // ============ 属性字段
+    private Trade trade;
+    private Engine engine;
+    /**
+     * 线程是否正常
+     */
+    private boolean success = false;
+    @Autowired
+    Prop prop;
 
 
-	public TradeThread(Trade trade, Engine engine) {
-		this.trade = trade;
-		this.engine = engine;
-		// 设置线程名称
-		setName(trade.getPlatName() + "交易");
-	}
+    public TradeThread(Trade trade, Engine engine) {
+        this.trade = trade;
+        this.engine = engine;
+        // 设置线程名称
+        setName(trade.getPlatName() + "交易");
+    }
 
-	@Override
-	public void run() {
-		long beginTime = System.currentTimeMillis();
-		try {
-			// 挂单,并返回挂单数量,
-			int orderNum = trade.tradeOrder();
-			// 如果挂单数量不为0
-			if (orderNum > 0) {
-				log_haveTrade.info(trade.getPlatName() + "已挂单" + orderNum + "个：" + trade.getUserOrderList().toString());
-				// 查询订单状态，最多4秒
-				for (int i = 0; i < 4000 / prop.time_sleep; i++) {
-					TimeUnit.MILLISECONDS.sleep(prop.time_sleep);// 睡眠
-					int unFinishedNum = trade.queryOrderState();
-					if (unFinishedNum == 0) {
-						break;
-					}
-				}//end for
-					// 撤销没完全成交的订单
-				trade.cancelOrder();
-				// 并刷新账户信息
-				trade.flushAccountInfo();
-			} else {
-				log.info(trade.getPlatName() + "--------  0 个挂单---------------------------------------");
-				// 如果只有0个挂单,说明价格需要倒挂
+    @Override
+    public void run() {
+        long beginTime = System.currentTimeMillis();
+        try {
+            // 挂单,并返回挂单数量,
+            int orderNum = trade.tradeOrder();
+            // 如果挂单数量不为0
+            if (orderNum > 0) {
 
-			}
-			success = true;
-		} catch (Exception e) {
-			log.error(getName() + "异常:" + e.getMessage(), e);
+                log_haveTrade.info(trade.getPlatName() + "已挂单" + orderNum + "个：" + trade.getUserOrderList().toString());
 
-		}
-		// 计算耗时
-		long endTime = System.currentTimeMillis();
-		log.info("线程结束,耗时" + (endTime - beginTime) + "毫秒*********************");
-	}
+                // 查询订单状态，最多4秒
+                for (int i = 0; i < 4000 / prop.time_sleep; i++) {
+                    TimeUnit.MILLISECONDS.sleep(prop.time_sleep);// 睡眠
+                    int unFinishedNum = trade.queryOrderState();
+                    if (unFinishedNum == 0) {
+                        break;
+                    }
+                }//end for
+                // 撤销没完全成交的订单
+                trade.cancelOrder();
+                // 并刷新账户信息
+                trade.flushAccountInfo();
+            } else {
+                log.info(trade.getPlatName() + "--------  0 个挂单---------------------------------------");
+                // 如果只有0个挂单,说明价格需要倒挂
 
-	public boolean isSuccess() {
-		return success;
-	}
+            }
+            success = true;
+        } catch (Exception e) {
+            log.error(getName() + "异常:" + e.getMessage(), e);
 
-	public void setSuccess(boolean success) {
-		this.success = success;
-	}
+        }
+        // 计算耗时
+        long endTime = System.currentTimeMillis();
+        log.info("线程结束,耗时" + (endTime - beginTime) + "毫秒*********************");
+    }
+
+    public boolean isSuccess() {
+        return success;
+    }
+
+    public void setSuccess(boolean success) {
+        this.success = success;
+    }
 
 }

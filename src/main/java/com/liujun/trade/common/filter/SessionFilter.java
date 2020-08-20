@@ -45,11 +45,11 @@ public class SessionFilter extends OncePerRequestFilter {
 
 
         // 不过滤的uri
-        String[] notFilter = new String[] {
+        String[] notFilter = new String[]{
                 "/menu_.*",
-                "/webchat/.*","/app/.*","/topic/.*","/queue/.*", ".*/cancelCloseRoom",".*/closeChatRoom",".*/chat_customer.html",
-                "/engine/queryDiffPrice.*", "/user/signin.html.*","/user/register.html.*", "/user/checkIsLogin.*", "/index.html.*", "/callback/.*",  "/js/.*", "/css/.*", "/images/.*",
-                "/robots.txt", "/sitemap.xml", "/skins/.*","/proxy.html.*","/proxy_close.html.*","/common/imgVerifyCode.html.*"};
+                "/webchat/.*", "/app/.*", "/topic/.*", "/queue/.*", ".*/cancelCloseRoom", ".*/closeChatRoom", ".*/chat_customer.html",
+                "/engine/queryDiffPrice.*", "/user/signin.html.*", "/user/register.html.*", "/user/checkIsLogin.*", "/index.html.*", "/callback/.*", "/js/.*", "/css/.*", "/images/.*",
+                "/robots.txt", "/sitemap.xml", "/skins/.*", "/proxy.html.*", "/proxy_close.html.*", "/common/imgVerifyCode.html.*"};
         for (String not : notFilter) {
             if (servletPath.matches(not)) {
                 filterChain.doFilter(httpServletRequest, httpServletResponse);
@@ -95,16 +95,16 @@ public class SessionFilter extends OncePerRequestFilter {
                 httpServletResponse.setHeader("sessionstatus", "timeout");
                 httpServletResponse.setStatus(403);
                 //向http头添加登录的url
-                httpServletResponse.addHeader("loginPath", "/user/signin.html");
+                httpServletResponse.addHeader("loginPath", httpServletRequest.getContextPath() + "/user/signin.html");
                 httpServletResponse.setContentType("application/json; charset=utf-8");
                 PrintWriter writer = httpServletResponse.getWriter();
                 Map<String, String> map = new HashMap<>();
                 map.put("retMsg", "请重新登录");
-                map.put("retCode","0000");
+                map.put("retCode", "0000");
                 writer.write(map.toString());
-            }else {
-                log.info("一般请求,没有登录，被拦截");
-                httpServletResponse.sendRedirect("/user/signin.html");
+            } else {
+                log.info("一般请求,没有登录，被拦截：" + servletPath);
+                httpServletResponse.sendRedirect(httpServletRequest.getContextPath() + "/user/signin.html");
 
             }
             return;

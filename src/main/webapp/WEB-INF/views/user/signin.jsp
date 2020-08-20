@@ -9,7 +9,7 @@
 <html>
 <head>
     <%@ include file="/resources.jsp" %>
-    <link href="${sessionScope.PAGE_SKIN}/css/user.css" rel="stylesheet">
+    <link href="<%=contextPath%>/${sessionScope.PAGE_SKIN}/css/user.css" rel="stylesheet">
     <title>登录</title>
 </head>
 <body>
@@ -27,7 +27,7 @@
             <span class="title">登录</span>
         </div>
         <div class="content">
-            <form action="/user/signin.html" method="post" onsubmit="return ValidForm(this)">
+            <form action="<%=contextPath%>/user/signin.html" method="post" onsubmit="return ValidForm(this)">
                 <div class="form-tip-line">
                     <span>${signInObj.errMsg}</span>
                 </div>

@@ -107,53 +107,65 @@ public class EngineController {
         Map<String, Object> map = new HashMap<>();
 
         try {
+            /*
             //打开价格偏差图时，确保引擎正在运行。
             Map resultMap = startEngine();
             if (!resultMap.get("retCode").equals("0000")) {
                 throw new Exception("引擎启动失败！");
             }
-            String[] legend;//样本说明
+            */
+            if(engineThread!=null&&engineThread.engine!=null) {
+                String[] legend;//样本说明
 
-            LineSerie[] series;//多条线
+                LineSerie[] series;//多条线
 
-            if (unit < 1 || unit > 60 || maxCell > 5000) {
-                throw new Exception("参数不合法");
-            }
-            //1.生成样本说明
-            legend = engineThread.engine.getEnablePlat();
-            //2. x坐标数据,y坐标数据
-            //y
-            series = new LineSerie[legend.length];
-            for (int i = 0; i < legend.length; i++) {
-                String plat = legend[i];
-                List list = avgDiffService.selectAvgDiff(plat, unit, maxCell);
-                LineSerie lineSerie = new LineSerie(plat, null, list);
-                series[i] = lineSerie;
-
-            }
-            //-------------  读取盈利  ---------------
-            double totalEarn = engineThread.engine.currentBalance.getTotalEarn();
-            double thisEarn = engineThread.engine.currentBalance.getThisEarn();
-            //
-            map.put("legend", legend);
-
-            map.put("series", series);
-            map.put("totalEarn", totalEarn);
-            map.put("thisEarn", thisEarn);
-            //显示当前状态
-            map.put("engineState", "正在运行");
-            //价格调整(adjustPrice)
-            Map<String, Double> adjustPriceMap = new HashMap<>();
-            for (Trade trade : engineThread.engine.platList) {
-                if (!trade.getPlatName().equals("virtual")) {
-                    adjustPriceMap.put(trade.getPlatName(), trade.getChangePrice());
+                if (unit < 1 || unit > 60 || maxCell > 5000) {
+                    throw new Exception("参数不合法");
                 }
+                //1.生成样本说明
+                legend = engineThread.engine.getEnablePlat();
+                //2. x坐标数据,y坐标数据
+                //y
+                series = new LineSerie[legend.length];
+                for (int i = 0; i < legend.length; i++) {
+                    String plat = legend[i];
+                    List list = avgDiffService.selectAvgDiff(plat, unit, maxCell);
+                    LineSerie lineSerie = new LineSerie(plat, null, list);
+                    series[i] = lineSerie;
 
+                }
+                //-------------  读取盈利  ---------------
+                double totalEarn = engineThread.engine.currentBalance.getTotalEarn();
+                double thisEarn = engineThread.engine.currentBalance.getThisEarn();
+                //
+                map.put("legend", legend);
+
+                map.put("series", series);
+                map.put("totalEarn", totalEarn);
+                map.put("thisEarn", thisEarn);
+                //显示当前状态
+                if(!engineThread.engine.stop) {
+                    map.put("engineState", "正在运行");
+                }else{
+                    map.put("engineState", "已暂停");
+                }
+                //价格调整(adjustPrice)
+                Map<String, Double> adjustPriceMap = new HashMap<>();
+                for (Trade trade : engineThread.engine.platList) {
+                    if (!trade.getPlatName().equals("virtual")) {
+                        adjustPriceMap.put(trade.getPlatName(), trade.getChangePrice());
+                    }
+
+                }
+                map.put("adjustPrice", adjustPriceMap);
+                //上次什么时候调整的偏差？
+
+                map.put("retCode", "0000");
+            }else{
+                map.put("retCode", "0001");
+                map.put("retMsg", "程序没有运行，请手工启动." );
+                map.put("engineState", "没有创建引擎，请启动。");
             }
-            map.put("adjustPrice", adjustPriceMap);
-            //上次什么时候调整的偏差？
-
-            map.put("retCode", "0000");
 
         } catch (Exception e) {
             log.error(e.getMessage(), e);

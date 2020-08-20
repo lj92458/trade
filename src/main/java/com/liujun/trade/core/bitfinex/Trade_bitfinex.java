@@ -1,5 +1,6 @@
 package com.liujun.trade.core.bitfinex;
 
+import com.liujun.trade.core.Engine;
 import com.liujun.trade.core.Prop;
 import com.liujun.trade.core.Trade;
 import com.liujun.trade.core.modle.AccountInfo;
@@ -94,8 +95,8 @@ public class Trade_bitfinex extends Trade {
 		*/
     }
 
-    public Trade_bitfinex(HttpUtil httpUtil, int platId, double usdRate,Prop prop) throws Exception {
-        super(httpUtil, platId, usdRate,prop);
+    public Trade_bitfinex(HttpUtil httpUtil, int platId, double usdRate,Prop prop, Engine engine) throws Exception {
+        super(httpUtil, platId, usdRate,prop, engine);
         try {
             if (usdRate == 0) {
                 throw new Exception("汇率不能为0");
