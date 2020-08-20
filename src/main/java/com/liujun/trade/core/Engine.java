@@ -444,88 +444,91 @@ public class Engine {
 
             double diffPrice = totalDepth.getBidList().get(0).getPrice()
                     - totalDepth.getAskList().get(0).getPrice();
-            log.debug("市场买单：" + totalDepth.getBidList().toString());
-            log.debug("市场卖单：" + totalDepth.getAskList().toString());
+            if (diffPrice > 0) {
 
-            //begin: 根据备份的市场深度求当前市场价格，然后设置给虚拟平台
-            double avgPrice = (totalDepth.getBidList().get(0).getPrice() + totalDepth.getAskList().get(0)
-                    .getPrice()) / 2.0;
-            List<MarketOrder> virtualAskList = virtualTrade.getBackupDepth().getAskList();
-            if (virtualAskList.size() > 0) {//降低市场卖单价格，确保真实平台能卖出
-                virtualAskList.get(0).setPrice(avgPrice * (1 - prop.huaDian));
-            }
-            List<MarketOrder> virtualBidList = virtualTrade.getBackupDepth().getBidList();
-            if (virtualBidList.size() > 0) {//提高市场买单价格，确保真实平台能买到
-                virtualBidList.get(0).setPrice(avgPrice * (1 + prop.huaDian));
-            }
-            // end : 根据备份的市场深度求当前市场价格，然后设置给虚拟平台
+                log.debug("市场买单：" + totalDepth.getBidList().toString());
+                log.debug("市场卖单：" + totalDepth.getAskList().toString());
 
-            int keyIndex = totalDepth.getBidList().get(0).getPlatId() * 10
-                    + totalDepth.getAskList().get(0).getPlatId();
-            log.info("可搬运最大差价【" + diffPrice + "】" + keyArray[keyIndex] + " " + totalDepth.getBidList().get(0)
-                    + "," + totalDepth.getAskList().get(0)); //
-
-
-            EarnCost maxEarnCost = null;
-            if (tradeModel.equals("simple")) {
-                maxEarnCost = createOrders1(totalDepth);// 正式生成订单
-            } else if (tradeModel.equals("exact")) {
-                maxEarnCost = createOrders2(totalDepth);
-            }
-
-            //收益率要大于0.4%
-            if (maxEarnCost.orderPair > 0 && (
-                    (maxEarnCost.earn >= prop.minMoney && maxEarnCost.earn / maxEarnCost.cost >= prop.atLeastRate)
-                            || virtualTrade.isActive())
-            ) {// (正式生成的订单数量)
-                log_needTrade.info("实际能赚" + maxEarnCost.earn + prop.money + "，利润率" + prop.formatMoney(maxEarnCost.earn / maxEarnCost.cost * 100) + "%，实际订单有" + maxEarnCost.orderPair + "对");
-                for (Trade trade : platList) {
-                    trade.processOrders();//订单预处理 。不需要，因为跟trade.backupUsefulOrder()方法功能是重复的
+                //begin: 根据备份的市场深度求当前市场价格，然后设置给虚拟平台
+                double avgPrice = (totalDepth.getBidList().get(0).getPrice() + totalDepth.getAskList().get(0)
+                        .getPrice()) / 2.0;
+                List<MarketOrder> virtualAskList = virtualTrade.getBackupDepth().getAskList();
+                if (virtualAskList.size() > 0) {//降低市场卖单价格，确保真实平台能卖出
+                    virtualAskList.get(0).setPrice(avgPrice * (1 - prop.huaDian));
                 }
-                //删掉无效订单
-                int usefulOrderCount = 0;
-                for (Trade trade : platList) {
-                    List<UserOrder> userOrderList = trade.getUserOrderList();
-                    for (int index = userOrderList.size() - 1; index >= 0; index--) {
-                        if (userOrderList.get(index).isEnable()) {
-                            usefulOrderCount++;
-                        } else {
-                            userOrderList.remove(index);// 无效订单要及时删掉
+                List<MarketOrder> virtualBidList = virtualTrade.getBackupDepth().getBidList();
+                if (virtualBidList.size() > 0) {//提高市场买单价格，确保真实平台能买到
+                    virtualBidList.get(0).setPrice(avgPrice * (1 + prop.huaDian));
+                }
+                // end : 根据备份的市场深度求当前市场价格，然后设置给虚拟平台
+
+                int keyIndex = totalDepth.getBidList().get(0).getPlatId() * 10
+                        + totalDepth.getAskList().get(0).getPlatId();
+                log.info("可搬运最大差价【" + diffPrice + "】" + keyArray[keyIndex] + " " + totalDepth.getBidList().get(0)
+                        + "," + totalDepth.getAskList().get(0)); //
+
+
+                EarnCost maxEarnCost = null;
+                if (tradeModel.equals("simple")) {
+                    maxEarnCost = createOrders1(totalDepth);// 正式生成订单
+                } else if (tradeModel.equals("exact")) {
+                    maxEarnCost = createOrders2(totalDepth);
+                }
+
+                //收益率要大于0.4%
+                if (maxEarnCost.orderPair > 0 && (
+                        (maxEarnCost.earn >= prop.minMoney && maxEarnCost.earn / maxEarnCost.cost >= prop.atLeastRate)
+                                || virtualTrade.isActive())
+                ) {// (正式生成的订单数量)
+                    log_needTrade.info("实际能赚" + maxEarnCost.earn + prop.money + "，利润率" + prop.formatMoney(maxEarnCost.earn / maxEarnCost.cost * 100) + "%，实际订单有" + maxEarnCost.orderPair + "对");
+                    for (Trade trade : platList) {
+                        trade.processOrders();//订单预处理 。不需要，因为跟trade.backupUsefulOrder()方法功能是重复的
+                    }
+                    //删掉无效订单
+                    int usefulOrderCount = 0;
+                    for (Trade trade : platList) {
+                        List<UserOrder> userOrderList = trade.getUserOrderList();
+                        for (int index = userOrderList.size() - 1; index >= 0; index--) {
+                            if (userOrderList.get(index).isEnable()) {
+                                usefulOrderCount++;
+                            } else {
+                                userOrderList.remove(index);// 无效订单要及时删掉
+                            }
+                        }// end for
+                        //如果已经加锁，判断是否应该释放锁
+                        if (trade.getModeLock() == 1 && userOrderList.size() == 0) {
+                            trade.setModeLock(0);
                         }
-                    }// end for
-                    //如果已经加锁，判断是否应该释放锁
-                    if (trade.getModeLock() == 1 && userOrderList.size() == 0) {
-                        trade.setModeLock(0);
+
+                    }
+                    //检查各平台的收益率是否合规，如果全部合规，才能启动交易
+                    boolean profitRateMatch = true;
+                    for (Trade trade : platList) {
+
+                        if (trade.getUserOrderList().size() > 0) {
+                            trade.profitRate = trade.profitRate();
+                            if (!virtualTrade.isActive() && trade.profitRate < prop.atLeastRate) {
+                                profitRateMatch = false;
+                                log.error(trade.getPlatName() + "当前收益率" + trade.profitRate + "小于规定的收益率" + prop.atLeastRate);
+                            }
+                        }
                     }
 
-                }
-                //检查各平台的收益率是否合规，如果全部合规，才能启动交易
-                boolean profitRateMatch = true;
-                for (Trade trade : platList) {
+                    //如果有需要执行的订单，才应该启动线程
+                    if (usefulOrderCount > 0 && profitRateMatch) {
+                        // 【多线程】对各平台执行挂单、查订单状态、撤销没完全成交的订单、刷新账户信息==================
+                        //先执行dex平台，如果成功，再执行cex平台？？？这样好吗？
+                        // 不好：dex平台浪费了一分钟时间，这时cex平台的情况已经变动了。生成的订单不应该被提交，应该直接作废。
+                        // 在下一轮循环时会调节goods数量，这样间接的执行了cex平台
+                        executeTrade();
 
-                    if (trade.getUserOrderList().size() > 0) {
-                        trade.profitRate = trade.profitRate();
-                        if (!virtualTrade.isActive() && trade.profitRate < prop.atLeastRate) {
-                            profitRateMatch = false;
-                            log.error(trade.getPlatName() + "当前收益率" + trade.profitRate + "小于规定的收益率" + prop.atLeastRate);
-                        }
+                        // end 【多线程】对各平台执行挂单、查订单状态、撤销没完全成交的订单、刷新账户信息============
+                        isSuccess = true;
                     }
+                } else {//end 如果正式生成的订单数量>0
+                    log.info("正式订单最多赚" + maxEarnCost.earn + prop.money + ",利润率" + (maxEarnCost.earn > 0 ? prop.formatMoney(maxEarnCost.earn / maxEarnCost.cost * 100) : 0) + "%," + maxEarnCost.orderPair + "对订单(不值得/看不上)----------------------");
+
                 }
-
-                //如果有需要执行的订单，才应该启动线程
-                if (usefulOrderCount > 0 && profitRateMatch) {
-                    // 【多线程】对各平台执行挂单、查订单状态、撤销没完全成交的订单、刷新账户信息==================
-                    //先执行dex平台，如果成功，再执行cex平台？？？这样好吗？
-                    // 不好：dex平台浪费了一分钟时间，这时cex平台的情况已经变动了。生成的订单不应该被提交，应该直接作废。
-                    // 在下一轮循环时会调节goods数量，这样间接的执行了cex平台
-                    executeTrade();
-
-                    // end 【多线程】对各平台执行挂单、查订单状态、撤销没完全成交的订单、刷新账户信息============
-                    isSuccess = true;
-                }
-            } else {//end 如果正式生成的订单数量>0
-                log.info("正式订单最多赚" + maxEarnCost.earn + prop.money + ",利润率" + prop.formatMoney(maxEarnCost.earn / maxEarnCost.cost * 100) + "%," + maxEarnCost.orderPair + "对订单(不值得/看不上)----------------------");
-
             }
         } else {//如果平台没有备份挂单,说明平台上没有资金
             if (totalDepth.getBidList().size() == 0) {
