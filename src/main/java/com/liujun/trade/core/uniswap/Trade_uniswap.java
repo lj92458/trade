@@ -182,7 +182,13 @@ public class Trade_uniswap extends Trade {
                 priceArr = productAPIService.getGasPriceGweiAndEthPrice(prop.money);
             }
             this.gasPriceGwei = adjustGasPrice(priceArr[0]);
-            double feeInEth = 140000 * this.gasPriceGwei / 1_000_000_000;//假设需要gas14万个，那么总共需要的eth是多少？
+            double limit = 0;
+            if (prop.goods.equals("eth") || prop.money.equals("eth")) {
+                limit = 180000;
+            } else {
+                limit = 280000;
+            }
+            double feeInEth = limit * this.gasPriceGwei / 1_000_000_000;//假设需要gas14万个，那么总共需要的eth是多少？
             //把eth价值，转化成本交易对中的money
             double feeInMoney;
             feeInMoney = feeInEth * priceArr[1];

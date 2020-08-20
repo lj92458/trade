@@ -317,8 +317,7 @@ public class Engine {
                     if (trade.getUserOrderList() == null || trade.getUserOrderList().size() > 0) {
                         trade.setUserOrderList(new ArrayList<>());
                     }
-                    //if (trade == virtualTrade)
-                    // continue;
+
                     MarketDepthThread marketDepthThread = SpringContextUtil.getBean(MarketDepthThread.class, trade, this);
                     marketDepthThread.setDaemon(true);// 设为守护线程
                     marketDepthThreadList.add(marketDepthThread);
@@ -458,8 +457,7 @@ public class Engine {
                             //检查各平台的收益率是否合规，如果全部合规，才能启动交易
                             boolean profitRateMatch = true;
                             for (Trade trade : platList) {
-                                if (trade == virtualTrade)
-                                    continue;
+
                                 if (trade.getUserOrderList().size() > 0) {
                                     trade.profitRate = trade.profitRate();
                                     if (!needAdjustGoods && trade.profitRate < prop.atLeastRate) {
@@ -472,30 +470,11 @@ public class Engine {
                             //如果有需要执行的订单，才应该启动线程
                             if (usefulOrderCount > 0 && profitRateMatch) {
                                 // 【多线程】对各平台执行挂单、查订单状态、撤销没完全成交的订单、刷新账户信息==================
-                                List<TradeThread> tradeThreadList = new ArrayList<>();
-                                // 为每个平台启动一个线程--------
-                                for (Trade trade : platList) {
-                                    if (trade == virtualTrade)
-                                        continue;
-                                    TradeThread tradeThread = SpringContextUtil.getBean(TradeThread.class, trade, this);
-                                    tradeThread.setDaemon(true);// 设为守护线程
-                                    tradeThreadList.add(tradeThread);
-                                    tradeThread.start();
-                                }// end for
-                                // 等待各个线程结束,最多等time_oneCycle秒-------
-                                for (TradeThread thread : tradeThreadList) {
-                                    thread.join(time_oneCycle * 1000);
-                                }
-                                // 检查线程超时
-                                for (TradeThread thread : tradeThreadList) {
-                                    if (!thread.isSuccess()) {
-                                        throw new Exception(thread.getName() + ":TradeThread异常");
-                                    }
-                                }
-                                log_haveTrade
-                                        .info("===================================================================================");
-                                initVirtualPlat();
-                                log.info("各线程都已结束=========");
+                                //先执行dex平台，如果成功，再执行cex平台？？？这样好吗？
+                                // 不好：dex平台浪费了一分钟时间，这时cex平台的情况已经变动了。生成的订单不应该被提交，应该直接作废。
+                                // 在下一轮循环时会调节goods数量，这样间接的执行了cex平台
+                                executeTrade();
+
                                 // end 【多线程】对各平台执行挂单、查订单状态、撤销没完全成交的订单、刷新账户信息============
                             }//end 如果有需要执行的订单，才应该启动线程
                         } else {//end 如果正式生成的订单数量>0
@@ -565,6 +544,45 @@ public class Engine {
                 log.error("HttpClient关闭时出现异常", e);
             }
         }
+    }
+
+    private void executeTrade() throws Exception {
+        List<TradeThread> tradeThreadList = new ArrayList<>();
+        // 为每个平台启动一个线程--------
+        //计算总的固定费用，如果>0,说明有dex平台参与，那么就不执行cex
+        double totalFixFee = 0;
+        for (Trade trade : platList) {
+            if (trade.getUserOrderList().size() > 0) {
+                totalFixFee += trade.getFixFee();
+            }
+        }
+        for (Trade trade : platList) {
+            if (trade.getUserOrderList().size() == 0)
+                continue;
+            //如果有dex平台存在，跳过cex平台，只执行dex，如果dex执行成功，在下个循环通过调节goods数量，间接执行了cex。
+            // 这样作的好处是:一旦dex踏空，cex也就没必要执行了。因为dex踏空率太高了。
+            if (totalFixFee > 0 && trade.getFixFee() == 0) {
+                continue;
+            }
+            TradeThread tradeThread = SpringContextUtil.getBean(TradeThread.class, trade, this);
+            tradeThread.setDaemon(true);// 设为守护线程
+            tradeThreadList.add(tradeThread);
+            tradeThread.start();
+        }// end for
+        // 等待各个线程结束,最多等time_oneCycle秒-------
+        for (TradeThread thread : tradeThreadList) {
+            thread.join(time_oneCycle * 1000);
+        }
+        // 检查线程超时
+        for (TradeThread thread : tradeThreadList) {
+            if (!thread.isSuccess()) {
+                throw new Exception(thread.getName() + ":TradeThread异常");
+            }
+        }
+        log_haveTrade
+                .info("===================================================================================");
+        initVirtualPlat();
+        log.info("各线程都已结束=========");
     }
 
     /**
@@ -670,7 +688,7 @@ public class Engine {
             //把平台id记下来
             platIdSet.add(ask.getPlatId());
             platIdSet.add(bid.getPlatId());
-            return new EarnCost(diffPrice * amount, bid.getPrice() * amount);
+            return new EarnCost(diffPrice * amount, (bid.getPrice() + ask.getPrice()) / 2 * amount);
         } else {// 如果不满足条件
             if (passArr[arrayIndex]) {// 如果早已不满足条件了
                 return new EarnCost(SECOND_FAIL, 0);
@@ -688,7 +706,7 @@ public class Engine {
      */
     private EarnCost createOrders1() throws Exception {
         orderPair = 0;// 初始化已配对的订单数量
-        EarnCost maxEarnCost = new EarnCost(0, 1);// 最多能赚多少钱
+        EarnCost maxEarnCost = new EarnCost(0, 0);// 最多能赚多少钱
         List<MarketOrder> askList = totalDepth.getAskList();
         List<MarketOrder> bidList = totalDepth.getBidList();
 
@@ -776,7 +794,7 @@ public class Engine {
             //把平台id记下来
             platIdSet.add(ask.getPlatId());
             platIdSet.add(bid.getPlatId());
-            return new EarnCost(diffPrice * amount, bid.getPrice() * amount);
+            return new EarnCost(diffPrice * amount, (bid.getPrice() + ask.getPrice()) / 2 * amount);
         } else {// 如果不满足条件
             if (passArr[arrayIndex]) {// 如果早已不满足条件了
                 return new EarnCost(SECOND_FAIL, 0);
@@ -796,7 +814,7 @@ public class Engine {
     private EarnCost adjustLimitPrice2() throws Exception {
         diffPrice_market = -1000;// 初始化当前差价
         orderPair = 0;// 初始化已配对的订单数量
-        EarnCost maxEarnCost = new EarnCost(0, 1);// 最多能赚多少钱
+        EarnCost maxEarnCost = new EarnCost(0, 0);// 最多能赚多少钱
         diffPriceDirection_maxPrice = null;
         List<MarketOrder> askList = totalDepth.getAskList();
         List<MarketOrder> bidList = totalDepth.getBidList();
@@ -852,7 +870,7 @@ public class Engine {
      */
     private EarnCost createOrders2() throws Exception {
         orderPair = 0;// 初始化已配对的订单数量
-        EarnCost maxEarnCost = new EarnCost(0, 1);// 最多能赚多少钱
+        EarnCost maxEarnCost = new EarnCost(0, 0);// 最多能赚多少钱
         List<MarketOrder> askList = totalDepth.getAskList();
         List<MarketOrder> bidList = totalDepth.getBidList();
         // 对角线法遍历矩阵(二维数组[askList][bidList])，竖向(第一维)是askList，横向(第二维)是bidList 。

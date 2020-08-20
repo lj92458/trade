@@ -58,7 +58,7 @@ var load = function (timeUnit, maxCell) {
         {unit: timeUnit, maxCell: maxCell},
         function (data) {
             if (data.retCode != '0000') {// 如果有异常消息
-                alert('queryDiffPrice:' + data.retCode + ':' + data.retMsg);
+                alert( data.retCode + ':' + data.retMsg);
             } else {
                 showEchart(data.legend, data.xAxis, data.series);
                 $('#balance').text('总收入：' + data.totalEarn + ',最近收入：' + data.thisEarn);

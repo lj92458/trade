@@ -13,18 +13,18 @@ import java.text.DecimalFormat;
 @Component
 public class Prop {
     @Value("${trade.formatGoodsStr}")
-    public  String formatGoodsStr;
+    public String formatGoodsStr;
     @Value("${trade.formatMoneyStr}")
-    public  String formatMoneyStr;
+    public String formatMoneyStr;
     @Value("${trade.minCoinNum}")
-    public  Double minCoinNum;//买卖币时，最小交易金额
+    public Double minCoinNum;//买卖币时，最小交易金额
     @Value("${trade.moneyPrice}")
-    public  Double moneyPrice;//计价货币的人民币价格
-    public  Double minMoney;//一次最少要赚的钱
-    public  Double huaDian;//滑点，用来强制调平资金。这是一个比例
-    public  Double huaDian2;//滑点，正常下单时，为了买到。这是一个比例
-    public  DecimalFormat fmt_goods;
-    public  DecimalFormat fmt_money;
+    public Double moneyPrice;//计价货币的人民币价格
+    public Double minMoney;//一次最少要赚的钱
+    public Double huaDian;//滑点，用来强制调平资金。这是一个比例
+    public Double huaDian2;//滑点，正常下单时，为了买到。这是一个比例
+    public DecimalFormat fmt_goods;
+    public DecimalFormat fmt_money;
 
     @Value("${trade.goods}")
     public String goods;
@@ -42,10 +42,10 @@ public class Prop {
     public double atLeastRate;//最低利润率(差价除以价格)
 
     @PostConstruct
-    public void init(){
+    public void init() {
         minMoney = atLeastEarn / this.moneyPrice;//一次最少要赚的钱
-        huaDian = 0.3/100;//滑点，用来强制调平资金.这是一个比例
-        huaDian2 = 0.03/100 ;//滑点，正常下单时，为了买到。这是一个比例
+        huaDian = 5.0 / 100;//滑点，用来强制调平资金.这是一个比例
+        huaDian2 = 0.03 / 100;//滑点，正常下单时，为了买到。这是一个比例
         fmt_goods = new DecimalFormat(this.formatGoodsStr);
         fmt_goods.setRoundingMode(RoundingMode.HALF_UP);
 
@@ -55,13 +55,13 @@ public class Prop {
 
     }
 
-    public  Double formatMoney(Double money) {
+    public Double formatMoney(Double money) {
         synchronized (fmt_money) {
             return Double.parseDouble(fmt_money.format(money));
         }
     }
 
-    public  Double formatGoods(Double goods) {
+    public Double formatGoods(Double goods) {
         synchronized (fmt_goods) {
             return Double.parseDouble(fmt_goods.format(goods));
         }

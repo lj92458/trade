@@ -17,7 +17,7 @@ web.xml,configurations-prd,logback.xml,conf.xml
 删除logback-test.xml
 5.  执行数据库建表/建库语句，插入初始化数据。
 6.  修改tomcat的server.xml，插入一条<Context>
-7.  
+7.  需要授权某合约能花费自己的token
 8.  
 #### 使用说明
 
