@@ -183,10 +183,25 @@ public class Trade_uniswap extends Trade {
             }
             this.gasPriceGwei = adjustGasPrice(priceArr[0]);
             double limit = 0;
-            if (prop.goods.equals("eth") || prop.money.equals("eth")) {
-                limit = 180000;
-            } else {
-                limit = 280000;
+            /*
+            approve  44,339
+            removeLiquidityETHWithPermit   178198  189810     172680
+            addLiquidity 157,282
+            addLiquidityETH 2706648
+            swapExactTokensForTokens 192253    156245  184603     178443    178614  130113
+            swapExactTokensForTokensSupportingFeeOnTransferTokens 232,635
+            swapETHForExactTokens 132,772
+            swapExactETHForTokens 117,096    111404    135285
+            swapExactTokensForETH 110,876    113087   127844  100526 110590  139288~151304
+            swapTokensForExactETH
+
+
+
+             */
+            if (prop.goods.equals("eth") || prop.money.equals("eth")) {//swapExactETHForTokens或swapExactTokensForETH
+                limit = 155000;
+            } else {//swapExactTokensForTokens
+                limit = 200000;
             }
             double feeInEth = limit * this.gasPriceGwei / 1_000_000_000;//假设需要gas14万个，那么总共需要的eth是多少？
             //把eth价值，转化成本交易对中的money

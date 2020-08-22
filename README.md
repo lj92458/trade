@@ -1,5 +1,6 @@
 # trade
-
+观测：将rpcServer端slippage提高到0.03，java端atLeastRate
+降到0.004
 #### 介绍
 数字货币自动交易/对冲套利/赚差价/量化交易。支持中心化平台和去中心化平台。
 集成了springMVC，sqlite，webSocket。将日志显示到页面。
