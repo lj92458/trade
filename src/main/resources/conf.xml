@@ -2,7 +2,7 @@
 
 <conf>
     <!-- 启用的平台 -->
-    <enablePlat>okcoin,uniswap</enablePlat>
+    <enablePlat>huobi,binance</enablePlat>
     <lastChange>2016-01-02 10:01:01</lastChange>
     <!-- 币从bitfinex平台流向其它平台时需满足 的最小差价 。 -->
     <!-- changePrice属性为：为了在差价长期不出现反转的平台之间搬运，给查询到的市场挂单价格减去该值，给发送出去的订单加上该值。 -->
@@ -68,5 +68,5 @@
         <binance>0.00008</binance>
     </poloniex>
     <!-- 第一条余额记录。格式：时间,总收入,本次收入,当前money,当前btc,okcoinMoney,okcoinGoods,chbtcMoney,chbtcGoods,当前价格, -->
-    <firstBalance>dateTime:2020-07-00 00:00:00,totalEarn:0,thisEarn:0,totalMoney:0,totalGoods:0.210589,{okcoinMoney:0,okcoinGoods:0,chbtcMoney:0,chbtcGoods:0,uniswapMoney:0,uniswapGoods:0},price:2841.397,</firstBalance>
+    <firstBalance>dateTime:2020-07-00 00:00:00,totalEarn:0,thisEarn:0,totalMoney:0,totalGoods:0.0,{okcoinMoney:0,okcoinGoods:0,chbtcMoney:0,chbtcGoods:0,uniswapMoney:0,uniswapGoods:0},price:2841.397,</firstBalance>
 </conf>
