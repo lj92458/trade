@@ -23,7 +23,7 @@ public class Balance {
     private DecimalFormat fmt_goods;
     private DecimalFormat fmt_money;
 
-    void init() {
+    private void init() {
         fmt_goods = new DecimalFormat(prop.formatGoodsStr);
         fmt_money = new DecimalFormat(prop.formatMoneyStr);
         fmt_goods.setRoundingMode(RoundingMode.HALF_UP);
@@ -95,8 +95,16 @@ public class Balance {
     }
 
     public void setTotalEarn(double totalEarn) {
-        synchronized (fmt_money) {
-            this.totalEarn = Double.parseDouble(fmt_money.format(totalEarn));
+        if (prop.earnMoney) {
+            synchronized (fmt_money) {
+                this.totalEarn = Double.parseDouble(fmt_money.format(totalEarn));
+            }
+        } else {
+            synchronized (fmt_goods) {
+                //System.out.println("totalEarn"+totalEarn);
+                //System.out.println(fmt_goods.format(totalEarn));
+                this.totalEarn = Double.parseDouble(fmt_goods.format(totalEarn));
+            }
         }
     }
 
@@ -105,8 +113,14 @@ public class Balance {
     }
 
     public void setThisEarn(double thisEarn) {
-        synchronized (fmt_money) {
-            this.thisEarn = Double.parseDouble(fmt_money.format(thisEarn));
+        if (prop.earnMoney) {
+            synchronized (fmt_money) {
+                this.thisEarn = Double.parseDouble(fmt_money.format(thisEarn));
+            }
+        } else {
+            synchronized (fmt_goods) {
+                this.thisEarn = Double.parseDouble(fmt_goods.format(thisEarn));
+            }
         }
     }
 

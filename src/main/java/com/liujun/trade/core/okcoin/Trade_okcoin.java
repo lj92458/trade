@@ -122,7 +122,7 @@ public class Trade_okcoin extends Trade {
         depth.getAskList().clear();
         depth.getBidList().clear();
         try {
-            Book book = spotProductAPIService.bookProductsByProductId(coinPair, prop.marketOrderSize + "", "" + prop.orderStepLength);
+            Book book = spotProductAPIService.bookProductsByInstrumentId(coinPair, prop.marketOrderSize + "", "" + prop.orderStepLength);
 
             // 卖方挂单
             List<String[]> askArr = book.getAsks();
@@ -221,7 +221,7 @@ public class Trade_okcoin extends Trade {
             PlaceOrderParam orderParam = new PlaceOrderParam();
             orderParam.setInstrument_id(coinPair);
             orderParam.setPrice(Double.toString(order.getPrice() * (1 + addPrice)));
-            orderParam.setType("limit");
+            orderParam.setType("market");// market limit
             orderParam.setSide(order.getType());
             orderParam.setSize(Double.toString(order.getVolume() - 0.00));
             orderParam.setOrder_type("0");
@@ -340,7 +340,7 @@ public class Trade_okcoin extends Trade {
             dto.setOrder_ids(order_ids);
             cancleOrders.add(dto);
 
-            this.spotOrderAPIServive.cancleOrders_post(cancleOrders);
+            this.spotOrderAPIServive.batchCancleOrdersByOrderId(cancleOrders);
         }
 
     }

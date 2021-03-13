@@ -11,6 +11,9 @@ import org.springframework.stereotype.Component;
 
 import java.util.concurrent.TimeUnit;
 
+/**
+ * 跨平台套利。现货。快速提交订单，并撤销没有完成的。
+ */
 @Component
 @Scope("prototype")
 public class TradeThread extends Thread {

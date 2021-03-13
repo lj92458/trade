@@ -17,5 +17,7 @@ public class Test1 {
         //币安 1592474623419  2020/6/18 18:3:43
         //本机 1592503436067  2020/6/19 2:3:56
         System.out.println("utc:"+getUnixTime());
+        double d=1.0;
+        System.out.println((int)d);
     }
 }

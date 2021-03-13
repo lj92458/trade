@@ -6,8 +6,10 @@ import com.liujun.trade.core.binance.Trade_binance;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInstance;
 import org.springframework.beans.factory.annotation.Autowired;
 
+@TestInstance(TestInstance.Lifecycle.PER_CLASS)
 public class TestBinance extends SpringTest {
 
      Trade trade;

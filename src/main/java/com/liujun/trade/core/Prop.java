@@ -25,6 +25,7 @@ public class Prop {
     public Double huaDian2;//滑点，正常下单时，为了买到。这是一个比例
     public DecimalFormat fmt_goods;
     public DecimalFormat fmt_money;
+    public String earnWhat;//是钱增加，还是币增加
 
     @Value("${trade.goods}")
     public String goods;
@@ -40,6 +41,10 @@ public class Prop {
     public Double atLeastEarn;
     @Value("${trade.atLeastRate}")
     public double atLeastRate;//最低利润率(差价除以价格)
+    @Value("${trade.earnMoney}")
+    public boolean earnMoney;
+    @Value("${trade.positionRate}")
+    public double positionRate;//仓位上限，占余额的比例。0.5表示50%
 
     @PostConstruct
     public void init() {
@@ -52,6 +57,7 @@ public class Prop {
         fmt_money = new DecimalFormat(this.formatMoneyStr);
         fmt_money.setRoundingMode(RoundingMode.HALF_UP);
 
+        earnWhat = earnMoney ? money : goods;
 
     }
 

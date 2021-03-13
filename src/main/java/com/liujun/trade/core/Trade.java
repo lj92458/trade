@@ -47,7 +47,7 @@ public abstract class Trade {
     /**
      * 当前价格
      */
-    private double currentPrice;
+    private double currentPrice=1;
     public HttpUtil httpUtil;
 
     /**
@@ -508,5 +508,13 @@ public abstract class Trade {
 
     public void setFixFee(double fixFee) {
         this.fixFee = fixFee;
+    }
+
+    public double getTotalGoods() {
+        return accInfo.getFreeGoods() + accInfo.getFreezedGoods();
+    }
+
+    public double getTotalMoney() {
+        return accInfo.getFreeMoney() + accInfo.getFreezedMoney();
     }
 }

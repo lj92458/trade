@@ -51,7 +51,8 @@ public class Engine {
     private static final double SECOND_FAIL = -99999999;
     private static final String CHANGE_PRICE = "changePrice";
     public static PriceInfo priceInfo;
-
+    public static final String FUTURE_EMPTY = "empty";
+    public static final String FUTURE_HOLD = "hold";
     // ---- end static ------------------------------------------------
 
     // --------- 对象属性 -------------------------------------------------
@@ -121,6 +122,9 @@ public class Engine {
 
     public VirtualTrade virtualTrade;// 虚拟的平台
 
+    private String futureState;//期现套利状态：empty空仓，hold持仓
+
+    private double openPriceGap;//开仓时，两个平台之间的差价.跟配置文件中平台出现的先后顺序有关：用前一个平台的价格减后一个平台
     // ====================
 
 
@@ -166,6 +170,7 @@ public class Engine {
 
             firstBalance = readXmlProp("firstBalance");
 
+            openPriceGap = Double.parseDouble(readXmlProp("openPriceGap"));
             //---------------
 
         /*
@@ -220,9 +225,7 @@ public class Engine {
                 trade.setChangePrice(Double.parseDouble(changePriceStr));
                 platList.add(trade);
             }
-            //添加虚拟平台
-            virtualTrade = SpringContextUtil.getBean(VirtualTrade.class, httpUtil, platList.size(), usdRate, prop, this);
-            platList.add(virtualTrade);
+
 
             // 长度是 (n-1)*11+1
             keyArray = new String[(platList.size() - 1) * 11 + 1];
@@ -303,9 +306,15 @@ public class Engine {
                 matchBackupDepth();
 
                 // 检查goods总数量,如果不跟初始值相等,就立即买卖调整
-                checkTotalGoods();
-                // 检查各平台的goods数量,如果分布不平衡,就自动转移。
-                // balanceGoods();
+                if (prop.earnMoney) {
+                    checkTotalGoods();
+                    // 检查各平台的goods数量,如果分布不平衡,就自动转移。
+                    // balanceGoods();
+                } else {
+                    checkTotalMoney();
+                    //balanceMoney();
+                }
+
                 // 盘点当前余额,计算盈亏------------------------
                 saveBalance();
                 //检查系统健康状况
@@ -427,9 +436,6 @@ public class Engine {
 
         for (Trade trade : platList) {
             //如果是调节goods数量，那么就不能让收矿工费的平台(uniswap)参与
-            if (virtualTrade.isActive() && trade.getFixFee() > 0) {
-                continue;
-            }
             //如果允许跨平台搬运
             if (trade.getModeLock() == 0) {
                 trade.setModeLock(1);//加锁
@@ -449,18 +455,6 @@ public class Engine {
                 log.debug("市场买单：" + totalDepth.getBidList().toString());
                 log.debug("市场卖单：" + totalDepth.getAskList().toString());
 
-                //begin: 根据备份的市场深度求当前市场价格，然后设置给虚拟平台
-                double avgPrice = (totalDepth.getBidList().get(0).getPrice() + totalDepth.getAskList().get(0)
-                        .getPrice()) / 2.0;
-                List<MarketOrder> virtualAskList = virtualTrade.getBackupDepth().getAskList();
-                if (virtualAskList.size() > 0) {//降低市场卖单价格，确保真实平台能卖出
-                    virtualAskList.get(0).setPrice(avgPrice * (1 - prop.huaDian));
-                }
-                List<MarketOrder> virtualBidList = virtualTrade.getBackupDepth().getBidList();
-                if (virtualBidList.size() > 0) {//提高市场买单价格，确保真实平台能买到
-                    virtualBidList.get(0).setPrice(avgPrice * (1 + prop.huaDian));
-                }
-                // end : 根据备份的市场深度求当前市场价格，然后设置给虚拟平台
 
                 int keyIndex = totalDepth.getBidList().get(0).getPlatId() * 10
                         + totalDepth.getAskList().get(0).getPlatId();
@@ -476,9 +470,9 @@ public class Engine {
                 }
 
                 //收益率要大于0.4%
-                if (maxEarnCost.orderPair > 0 && (
+                if (maxEarnCost.orderPair > 0 &&
                         (maxEarnCost.earn >= prop.minMoney && maxEarnCost.earn / maxEarnCost.cost >= prop.atLeastRate)
-                                || virtualTrade.isActive())
+
                 ) {// (正式生成的订单数量)
                     log_needTrade.info("实际能赚" + maxEarnCost.earn + prop.money + "，利润率" + prop.formatMoney(maxEarnCost.earn / maxEarnCost.cost * 100) + "%，实际订单有" + maxEarnCost.orderPair + "对");
                     for (Trade trade : platList) {
@@ -507,7 +501,7 @@ public class Engine {
 
                         if (trade.getUserOrderList().size() > 0) {
                             trade.profitRate = trade.profitRate();
-                            if (!virtualTrade.isActive() && trade.profitRate < prop.atLeastRate) {
+                            if (trade.profitRate < prop.atLeastRate) {
                                 profitRateMatch = false;
                                 log.error(trade.getPlatName() + "当前收益率" + trade.profitRate + "小于规定的收益率" + prop.atLeastRate);
                             }
@@ -557,11 +551,11 @@ public class Engine {
             throw new Exception("本次超时！耗时" + (useTime / 1000.0) + "秒++++++++++++++++++++++++++++++++++++++");
         } else if (useTime > (time_oneCycle * 1000)) {
             log.warn("xxxxxxxxxxxxxx本次超时！耗时" + (useTime / 1000.0) + "秒xxxxxxxxxxxxxxxtotalEarn:"
-                    + currentBalance.getTotalEarn() + prop.money + "===thisEarn:" + currentBalance.getThisEarn()
-                    + prop.money + " xxxxx");
+                    + currentBalance.getTotalEarn() + prop.earnWhat + "===thisEarn:" + currentBalance.getThisEarn()
+                    + prop.earnWhat + " xxxxx");
         } else {
             log.info("==============本次耗时" + useTime + "毫秒=======totalEarn:" + currentBalance.getTotalEarn()
-                    + prop.money + "===thisEarn:" + currentBalance.getThisEarn() + prop.money + "============");
+                    + prop.earnWhat + "===thisEarn:" + currentBalance.getThisEarn() + prop.earnWhat + "============");
         }
         //检测亏损
         if (currentBalance.getThisEarn() <= -60.0 / prop.moneyPrice) {
@@ -607,9 +601,8 @@ public class Engine {
                 throw new Exception(thread.getName() + ":TradeThread异常");
             }
         }
-        log_haveTrade
-                .info("===================================================================================");
-        initVirtualPlat();
+        log_haveTrade.info("===================================================================================");
+
         log.info("各线程都已结束=========");
     }
 
@@ -689,11 +682,12 @@ public class Engine {
         }
         double amount = Math.min(ask.getVolume(), bid.getVolume());
         // 如果不是虚拟平台，就调节限价
-        if (bid.getPlatId() != ask.getPlatId() && bid.getPlatId() != virtualTrade.platId
-                && ask.getPlatId() != virtualTrade.platId) {
+        if (bid.getPlatId() != ask.getPlatId()) {
+            /*
             changeLimit.adjust1(diffPrice, amount, arrayIndex, ask, bid, passAdjust1Arr);//
             changeLimit.adjust2(diffPrice, amount, arrayIndex, ask, bid);
             changeLimit.adjust3(diffPrice, amount, arrayIndex, ask, bid);
+            */
         }
         // 如果有差价,并且差价大于min_diffPrice,就值得搬运
         if (diffPrice >= priceArray[arrayIndex]) {
@@ -1024,8 +1018,7 @@ public class Engine {
         double totalMoney = 0;
         StringBuilder platInfo = new StringBuilder();
         for (Trade trade : platList) {
-            if (trade == virtualTrade)
-                continue;
+
             log.debug(trade.getPlatName() + "当前价格" + trade.getCurrentPrice());
             AccountInfo inf = trade.getAccInfo();
             totalPrice += trade.getCurrentPrice();
@@ -1036,18 +1029,24 @@ public class Engine {
                     .append(inf.getFreeMoney());
             platInfo.append(",").append(trade.getPlatName()).append("Goods").append(":")
                     .append(inf.getFreeGoods());
-            totalGoods += inf.getFreeGoods() + inf.getFreezedGoods();
-            totalMoney += inf.getFreeMoney() + inf.getFreezedMoney();
+            totalGoods += trade.getTotalGoods();
+            totalMoney += trade.getTotalMoney();
         }// end for
-        bal.setPrice(totalPrice / (platList.size() - 1));//排除虚拟平台
+        bal.setPrice(totalPrice / platList.size());//排除虚拟平台
         bal.setPlatInfo(platInfo.toString());
         bal.setTotalGoods(totalGoods);
         bal.setTotalMoney(totalMoney);
         //
         // 跟初始余额比较,计算总共盈亏
         Balance initBalance = new Balance(prop, firstBalance);
-        double totalEarn = bal.getTotalMoney() - initBalance.getTotalMoney() + bal.getPrice()
-                * (bal.getTotalGoods() - initBalance.getTotalGoods());
+        double totalEarn;
+        if (prop.earnMoney) {//如果是赚货币
+            totalEarn = bal.getTotalMoney() - initBalance.getTotalMoney() + bal.getPrice()
+                    * (bal.getTotalGoods() - initBalance.getTotalGoods());
+        } else {//如果是赚商品
+            totalEarn = (bal.getTotalMoney() - initBalance.getTotalMoney()) / bal.getPrice() +
+                    bal.getTotalGoods() - initBalance.getTotalGoods();
+        }
         bal.setTotalEarn(totalEarn);
         // 跟上次盈亏比较,计算本次盈亏
         bal.setThisEarn(bal.getTotalEarn() - lastBalance.getTotalEarn());
@@ -1062,7 +1061,7 @@ public class Engine {
      * @throws Exception
      */
     public void checkTotalGoods() throws Exception {
-        initVirtualPlat();
+        //initVirtualPlat();
         currentBalance = getCurrentBalance();
         Balance initBal = new Balance(prop, firstBalance);
         double diffAmount = currentBalance.getTotalGoods() - initBal.getTotalGoods();
@@ -1070,56 +1069,41 @@ public class Engine {
         log.debug("diffAmount:" + currentBalance.getTotalGoods() + " , " + initBal.getTotalGoods());
         if (diffAmount > 300.0 / prop.moneyPrice / currentBalance.getPrice()) {// 如果变多,就卖
             log.info("总goods增多" + diffAmount);
-            // 增加一个虚拟的低价市场卖单，诱使程序在其他平台卖
-            virtualTrade.setCurrentPrice(currentBalance.getPrice());
-            // 设置市场挂单
-            MarketDepth depth = virtualTrade.getMarketDepth();
-            MarketOrder marketOrder = new MarketOrder();
-            marketOrder.setPlatId(virtualTrade.platId);
-            marketOrder.setPrice(currentBalance.getPrice() * (1 - prop.huaDian));//价格设置不不光是在这里，还要在下一轮比价时
-            marketOrder.setVolume(diffAmount);
-            depth.getAskList().add(marketOrder);
-            // log.info("virtual:卖单" + depth.getAskList().size());
-            // 设置账户信息
-            AccountInfo accInfo = new AccountInfo();
-            accInfo.setFreeMoney(diffAmount * currentBalance.getPrice());
-            virtualTrade.setAccInfo(accInfo);
+
             //
         } else if (diffAmount < -300.0 / prop.moneyPrice / currentBalance.getPrice()) {// 如果变少就买
             diffAmount = 0 - diffAmount;
             log.info("总goods减少" + diffAmount);
-            // 增加一个虚拟的高价市场买单，诱使程序在其他平台买
-            virtualTrade.setCurrentPrice(currentBalance.getPrice());
-            // 设置市场挂单
-            MarketDepth depth = virtualTrade.getMarketDepth();
-            MarketOrder marketOrder = new MarketOrder();
-            marketOrder.setPlatId(virtualTrade.platId);
-            marketOrder.setPrice(currentBalance.getPrice() * (1 + prop.huaDian));//价格设置不不光是在这里，还要在下一轮比价时
-            marketOrder.setVolume(diffAmount);
-            depth.getBidList().add(marketOrder);
-            log.info("virtual:买单" + depth.getBidList().size() + ",市场均价" + currentBalance.getPrice());
-            // log.info("currentBalance.getPrice():"+currentBalance.getPrice());
-            // 设置账户信息
-            AccountInfo accInfo = new AccountInfo();
-            accInfo.setFreeGoods(diffAmount + 10);
-            virtualTrade.setAccInfo(accInfo);
+
             //
-        } else {
-            // log.info("总goods数量无变化");
         }
 
     }
 
-    public void initVirtualPlat() {
-        // 清空市场挂单
-        MarketDepth depth = virtualTrade.getMarketDepth();
-        depth.getBidList().clear();
-        depth.getAskList().clear();
-        // 清空账户信息
-        virtualTrade.getAccInfo().setFreeGoods(0);
-        virtualTrade.getAccInfo().setFreeMoney(0);
-    }
+    /**
+     * 检查goods总数量,如果不跟初始值相等,就立即调整。
+     *
+     * @throws Exception
+     */
+    public void checkTotalMoney() throws Exception {
+        //initVirtualPlat();
+        currentBalance = getCurrentBalance();
+        Balance initBal = new Balance(prop, firstBalance);
+        double diffAmount = currentBalance.getTotalMoney() - initBal.getTotalMoney();
 
+        log.debug("diffAmount:" + currentBalance.getTotalMoney() + " , " + initBal.getTotalMoney());
+        if (diffAmount > 640.0 / prop.moneyPrice) {// 如果变多,就卖
+            log.info("总Money增多" + diffAmount);
+
+            //
+        } else if (diffAmount < -640.0 / prop.moneyPrice) {// 如果变少就买
+            diffAmount = 0 - diffAmount;
+            log.info("总Money减少" + diffAmount);
+
+            //
+        }
+
+    }
 
     /**
      * 从xml配置文件中读取参数
@@ -1256,5 +1240,28 @@ public class Engine {
     public String[] getEnablePlat() {
         return readXmlProp("enablePlat").split(",");
     }
+
+    public String getFutureState() {
+        return futureState;
+    }
+
+    public void setFutureState(String futureState) {
+        this.futureState = futureState;
+
+    }
+
+    public double getOpenPriceGap() {
+        return openPriceGap;
+    }
+
+    public void setOpenPriceGap(double openPriceGap) {
+        this.openPriceGap = openPriceGap;
+        try {
+            saveXmlProp("openPriceGap", openPriceGap + "");
+        } catch (Exception e) {
+            log.error("", e);
+        }
+    }
+
 }
 
