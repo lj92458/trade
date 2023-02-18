@@ -1,4 +1,5 @@
 # trade
+多平台之间现货套利，也把dex看作现货平台
 观测：将rpcServer端slippage提高到0.03，java端atLeastRate
 降到0.004
 #### 介绍
